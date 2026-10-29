@@ -1,0 +1,47 @@
+name: Bangun APK
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Buka ZIP proyek (kalau diunggah sebagai ZIP)
+        run: |
+          if [ -f launcher-luxio.zip ]; then unzip -o -q launcher-luxio.zip -d . ; fi
+          ls -la
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Bangun APK
+        run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: Beri nama APK
+        run: cp app/build/outputs/apk/release/app-release.apk LauncherLuxio-${{ github.run_number }}.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: LauncherLuxio-${{ github.run_number }}
+          path: LauncherLuxio-*.apk
+
+      - name: Terbitkan di Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ github.run_number }}
+          name: Launcher Luxio ${{ github.run_number }}
+          body: APK siap pasang ke head unit TS10. Unduh berkas .apk di bawah.
+          files: LauncherLuxio-*.apk
