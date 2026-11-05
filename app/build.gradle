@@ -16,18 +16,23 @@ android {
         versionName "2.0.$nomor"
     }
 
-    // satu kunci tetap, supaya versi baru bisa dipasang menimpa versi lama
+    // Kunci tanda tangan TIDAK ada di repo. GitHub Actions membuatnya dari secret
+    // LUXIO_KEYSTORE_B64 + LUXIO_KEYSTORE_PASSWORD. Tanpa secret, build release memakai kunci debug
+    // (hanya untuk uji lokal; APK itu tidak bisa menimpa versi resmi).
+    def ksFile = file('luxio-release.jks')
+    def ksPass = System.getenv('LUXIO_KEYSTORE_PASSWORD')
     signingConfigs {
         luxio {
-            storeFile file('luxio.jks')
-            storePassword 'luxio-launcher'
-            keyAlias 'luxio'
-            keyPassword 'luxio-launcher'
+            if (ksFile.exists() && ksPass) {
+                storeFile ksFile
+                storePassword ksPass
+                keyAlias 'luxio'
+                keyPassword ksPass
+            }
         }
     }
     buildTypes {
-        release { minifyEnabled false; signingConfig signingConfigs.luxio }
-        debug { signingConfig signingConfigs.luxio }
+        release { minifyEnabled false; signingConfig(ksFile.exists() && ksPass ? signingConfigs.luxio : signingConfigs.debug) }
     }
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17

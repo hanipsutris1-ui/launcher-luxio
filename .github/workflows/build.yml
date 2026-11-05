@@ -27,7 +27,16 @@ jobs:
         with:
           gradle-version: '8.9'
 
+      - name: Pasang kunci tanda tangan dari secret
+        env:
+          KS_B64: ${{ secrets.LUXIO_KEYSTORE_B64 }}
+        run: |
+          if [ -z "$KS_B64" ]; then echo "::error::Secret LUXIO_KEYSTORE_B64 belum diisi di Settings > Secrets and variables > Actions"; exit 1; fi
+          echo "$KS_B64" | base64 -d > app/luxio-release.jks
+
       - name: Bangun APK
+        env:
+          LUXIO_KEYSTORE_PASSWORD: ${{ secrets.LUXIO_KEYSTORE_PASSWORD }}
         run: gradle assembleRelease --no-daemon --stacktrace
 
       - name: Catatan rilis dari pesan commit
