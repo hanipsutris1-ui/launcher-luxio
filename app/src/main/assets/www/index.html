@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="id"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Luxio VARIO Home</title>
+<style>
+@font-face{font-family:"Overpass";src:url(fonts/Overpass-Regular.woff2) format("woff2");font-weight:400}
+@font-face{font-family:"Overpass";src:url(fonts/Overpass-SemiBold.woff2) format("woff2");font-weight:600}
+@font-face{font-family:"Overpass";src:url(fonts/Overpass-Bold.woff2) format("woff2");font-weight:700}
+@font-face{font-family:"Overpass";src:url(fonts/Overpass-ExtraBold.woff2) format("woff2");font-weight:800}
+/* Layar HU 1280x800. Tema showroom gelap: mobil kiri, info kanan, dock 5 ikon di bawah. */
+:root{--ink:#eef2f6;--dim:rgba(238,242,246,.62);--line:rgba(255,255,255,.12);
+  --acc:#5fb4ff;--acc-rgb:95,180,255;--glow:#cfe8ff;--panel:rgba(14,18,24,.82)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:#000;overflow:hidden}
+body{font-family:Overpass,system-ui,sans-serif;color:var(--ink);font-variant-numeric:tabular-nums;user-select:none;-webkit-user-select:none}
+#stage{position:fixed;inset:0;overflow:hidden}
+#app{position:absolute;left:0;top:0;width:1280px;height:800px;transform-origin:0 0;overflow:hidden;background:#07090c}
+#bg{position:absolute;inset:0;background:radial-gradient(90% 80% at 32% 58%,#2a3442 0%,#121820 50%,#07090c 100%);background-size:cover;background-position:center;transition:opacity .6s}
+#hud{position:absolute;left:470px;top:505px;width:340px;height:170px;transform:perspective(520px) rotateX(48deg);transform-origin:50% 100%;touch-action:none}
+#wallfx-wrap{position:absolute;inset:0;display:none}#wallfx-wrap.on{display:block}#wallfx{width:1280px;height:800px}
+#halo{position:absolute;inset:0;pointer-events:none;transition:background 3s}
+#gl{position:absolute;inset:0;width:1280px;height:800px;touch-action:none}
+#dim{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity 2.5s}
+.glow{color:var(--glow);font-weight:800;text-shadow:0 0 18px rgba(var(--acc-rgb),.85),0 0 4px rgba(var(--acc-rgb),.6)}
+svg.ic{stroke:var(--acc);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radius:12px}
+.ui{transition:opacity .4s}
+#app.foto .ui{opacity:0;pointer-events:none}
+/* lokasi */
+#loc{position:absolute;left:40px;top:30px;display:flex;gap:12px;align-items:flex-start;max-width:280px}
+#loc svg{width:26px;height:26px;margin-top:3px;flex:none}
+#kec{font-size:26px;font-weight:700;line-height:1.15}
+#kab{font-size:16px;color:var(--dim);margin-top:4px}
+/* doa */
+#doa{position:absolute;left:320px;top:22px;width:490px;padding:10px 16px;border-left:2px solid var(--acc);
+  background:linear-gradient(90deg,rgba(var(--acc-rgb),.10),rgba(var(--acc-rgb),0));transition:opacity 1.2s}
+#doa .jd{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--acc);font-weight:700}
+#doa .lt{font-size:13.5px;color:var(--glow);line-height:1.45;margin-top:4px}
+#doa .ar{font-size:21px;line-height:1.6;margin-top:2px;font-family:"Noto Naskh Arabic","Amiri",serif;text-align:right}
+#doa .tr{font-size:13px;color:var(--dim);line-height:1.45;margin-top:4px}
+#doa .src{font-size:13px;color:var(--acc);margin-top:6px;font-weight:600}
+#doa.off{opacity:0;pointer-events:none}
+/* jam & adzan */
+#status{position:absolute;right:40px;top:30px;display:flex;gap:28px;align-items:flex-start}
+#status .kiri{padding-top:10px}
+.adz{display:flex;align-items:center;gap:8px;font-size:19px}
+.adz b{font-size:26px;margin-left:2px}
+.adz svg,.cu svg{width:21px;height:21px}
+#cd{font-size:15px;color:var(--dim);margin-left:30px;margin-top:2px}
+.cu{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:17px}
+.cu.off{display:none}
+#status .kanan{text-align:right}
+#jam{font-size:68px;line-height:.95;letter-spacing:-1px}
+#jam small{font-size:22px;font-weight:700;margin-left:4px}
+#tgl{font-size:17px;color:var(--dim);margin-top:8px}
+#hij{font-size:15px;color:var(--dim);margin-top:2px}
+#jam.pulse,.adz.pulse b{animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.55}}
+/* area kanan untuk Waze / YouTube */
+#slot{position:absolute;right:40px;top:200px;width:400px;height:232px;display:flex;justify-content:center;gap:56px;align-items:center;border-radius:18px}
+#slot>button{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--glow);min-width:96px;min-height:96px;justify-content:center;border-radius:18px}
+#slot>button:active{transform:scale(.95)}
+#slot svg{width:44px;height:44px;stroke:var(--glow);fill:none;stroke-width:1.5;stroke-linejoin:round;filter:drop-shadow(0 0 8px rgba(var(--acc-rgb),.9))}
+#panel{position:absolute;inset:0;border-radius:18px;border:1px solid var(--line);background:rgba(10,14,20,.7);display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;text-align:center;font-size:16px;color:var(--dim);padding:20px}
+#panel.on{display:flex}
+#panel b{color:var(--ink);font-size:20px}
+#panel .x{position:absolute;right:8px;top:8px;width:44px;height:44px;font-size:22px;color:var(--ink)}
+/* media */
+#media{position:absolute;right:40px;bottom:140px;width:400px;touch-action:pan-y}
+.mus{display:flex;gap:18px;align-items:center}
+.cover{width:72px;height:72px;border-radius:50%;border:1.5px solid var(--acc);box-shadow:0 0 18px rgba(var(--acc-rgb),.35);display:grid;place-items:center;flex:none;overflow:hidden}
+.cover img{width:100%;height:100%;object-fit:cover}
+.cover svg{width:30px;height:30px}
+.srcchip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--acc);border:1px solid rgba(var(--acc-rgb),.45);border-radius:12px;padding:2px 10px 1px 8px;margin-bottom:6px;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#judul{font-size:24px;font-weight:700;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}
+#artis{font-size:17px;color:var(--dim);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}
+.bar{height:4px;border-radius:2px;background:var(--line);margin:18px 0 6px;position:relative;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--acc);border-radius:2px}
+.wkt{display:flex;justify-content:space-between;font-size:14px;color:var(--dim)}
+.ctl{display:flex;justify-content:center;gap:34px;align-items:center;margin-top:10px}
+.ctl button{width:60px;height:60px;border-radius:50%;display:grid;place-items:center}
+.ctl button:active{transform:scale(.94)}
+.ctl svg{width:28px;height:28px;stroke:var(--ink);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ctl .play{width:68px;height:68px;border:1.5px solid var(--acc);box-shadow:0 0 18px rgba(var(--acc-rgb),.4)}
+.ctl .play svg{stroke:var(--acc);stroke-width:2.4}
+#mEmpty{text-align:center;padding-bottom:28px}
+.bis{font-size:24px;font-weight:700}
+.srcs{display:flex;justify-content:center;gap:44px;margin-top:22px}
+.srcs button{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--glow)}
+.srcs svg{width:64px;height:64px;padding:14px;border-radius:50%;border:1.5px solid var(--acc);stroke:var(--glow);fill:none;stroke-width:1.6;box-shadow:0 0 16px rgba(var(--acc-rgb),.4)}
+.srcs button:active svg{transform:scale(.94)}
+#media.kosong #mPlay,#media:not(.kosong) #mEmpty{display:none}
+/* dock */
+#dock{position:absolute;left:36px;right:36px;bottom:22px;height:76px;display:flex;justify-content:space-around;align-items:center;border-top:1px solid var(--line);transition:transform .45s,opacity .45s}
+#dock.hide{transform:translateY(110px);opacity:0;pointer-events:none}
+#dock button{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:15px;color:var(--dim);font-weight:600;min-width:120px;height:76px;justify-content:center;border-radius:14px}
+#dock button:active{transform:scale(.95)}
+#dock button.on{color:var(--glow)}#dock button.on svg{stroke:var(--glow);filter:drop-shadow(0 0 6px rgba(var(--acc-rgb),.9))}
+#dock svg{width:34px;height:34px;stroke:var(--ink);fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+#dock img{width:34px;height:34px;border-radius:8px}
+/* popup */
+.pop{position:absolute;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;z-index:20}
+.pop.on{display:flex}
+.sheet{width:960px;max-height:640px;background:var(--panel);border:1px solid var(--line);border-radius:26px;padding:24px 28px;overflow:auto}
+.sheet header{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px}
+.sheet h2{font-size:24px;font-weight:700}
+.sheet h3{font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);font-weight:600;margin:18px 0 10px}
+.x{width:52px;height:52px;border-radius:50%;border:1px solid var(--line);font-size:24px;display:grid;place-items:center}
+.grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
+.grid button{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 4px;border-radius:16px;font-size:15px;font-weight:600;min-height:112px}
+.grid button:active{background:rgba(255,255,255,.06);transform:scale(.97)}
+.grid img,.grid .ph{width:60px;height:60px;border-radius:16px}
+.grid .ph{display:grid;place-items:center;border:1.5px solid var(--acc);color:var(--glow);font-size:26px;font-weight:800}
+.grid span{max-width:130px;text-align:center;line-height:1.2;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.hint{font-size:14px;color:var(--dim);margin-top:14px}
+.row{display:flex;flex-wrap:wrap;gap:10px}
+.chip{height:52px;padding:0 20px;border-radius:26px;border:1.5px solid var(--line);font-size:17px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+.chip[aria-pressed="true"]{border-color:var(--acc);color:var(--glow);box-shadow:0 0 14px rgba(var(--acc-rgb),.35)}
+.chip:active{transform:scale(.97)}
+.sw{width:26px;height:26px;border-radius:50%}
+#toast{position:absolute;left:50%;bottom:118px;transform:translateX(-50%) translateY(10px);background:var(--panel);border:1px solid var(--line);border-radius:20px;padding:10px 20px;font-size:17px;opacity:0;transition:.3s;pointer-events:none;z-index:30}
+#toast.on{opacity:1;transform:translateX(-50%)}
+#fotoExit{position:absolute;right:30px;top:24px;z-index:25;display:none}
+#app.foto #fotoExit{display:inline-flex}
+#loading{position:absolute;left:330px;top:400px;font-size:16px;color:var(--dim)}
+#simbar{position:fixed;left:0;right:0;bottom:0;height:56px;display:flex;align-items:center;gap:6px;padding:0 8px;background:#0b0f14;border-top:1px solid #1d2733;overflow-x:auto;font:600 14px Overpass,sans-serif;color:#9fb3c8;z-index:50}
+#simbar[hidden]{display:none}
+#simbar span{padding:0 6px;color:#6f8399;flex:none}
+#simbar button{flex:none;height:42px;min-width:48px;padding:0 12px;border-radius:21px;border:1px solid #2a3a4c;color:#dbe7f3;font:600 14px Overpass,sans-serif}
+#simbar button[aria-pressed="true"],#simbar button.on{border-color:#5fb4ff;color:#cfe8ff}
+#rot{display:none;position:fixed;left:0;right:0;bottom:12px;text-align:center;color:#aaa;font:14px Overpass,sans-serif}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.tabs{display:flex;gap:8px;margin-bottom:6px;border-bottom:1px solid var(--line)}
+.tabs button{height:52px;padding:0 22px;font-size:17px;font-weight:700;color:var(--dim);border-bottom:2px solid transparent}
+.tabs button[aria-selected="true"]{color:var(--glow);border-bottom-color:var(--acc)}
+.inrow{align-items:flex-end;margin-top:10px}
+.row[hidden],section[hidden]{display:none}
+.inrow label{display:flex;flex-direction:column;gap:6px;font-size:14px;color:var(--dim);font-weight:600}
+.inrow input{height:52px;width:220px;border-radius:14px;border:1.5px solid var(--line);background:rgba(255,255,255,.04);color:var(--ink);font:600 19px Overpass;padding:0 14px;text-transform:uppercase}
+.inrow input:focus{outline:none;border-color:var(--acc)}
+#nama{text-transform:none}
+.chip.warn{border-color:rgba(255,110,90,.6);color:#ffc2b8}
+.about{font-size:15px;line-height:1.7;color:var(--dim)}.about b{color:var(--ink)}
+.sheet.small{width:560px}
+#homeBanner{position:absolute;left:50%;top:168px;transform:translateX(-50%);display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid rgba(255,200,80,.5);border-radius:28px;padding:6px 8px 6px 22px;font-size:16px;z-index:15}
+#homeBanner[hidden]{display:none}
+#perf{position:absolute;left:330px;top:34px;font:700 15px Overpass;color:var(--glow);letter-spacing:.04em;background:rgba(10,14,20,.6);border:1px solid var(--line);border-radius:14px;padding:6px 14px}
+#perf[hidden]{display:none}
+#doa .salam{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px}
+#hud{transition:transform .5s ease,top .5s ease,left .5s ease}
+#app.dockoff #hud{top:560px;transform:perspective(520px) rotateX(48deg) scale(1.4)}
+.holding{transform:scale(1.12)!important;transition:transform .45s ease;filter:drop-shadow(0 0 10px rgba(var(--acc-rgb),.9))}
+#loc.nogps svg{stroke:#8a94a0;animation:pulse 1.6s ease-in-out infinite}
+</style></head><body>
+<div id="stage"><div id="app">
+  <div id="bg"></div><div id="wallfx-wrap"><canvas id="wallfx" width="1280" height="800"></canvas></div><div id="halo"></div>
+  <canvas id="gl" aria-label="Mobil Luxio VARIO 3D. Geser untuk memutar, ketuk dua kali untuk kembali. Ketuk lampu mobil untuk menyalakan lampu."></canvas>
+  <canvas id="hud" width="512" height="256" class="ui" aria-label="Kecepatan dan trip. Tekan lama untuk reset trip."></canvas>
+  <div id="loading">Memuat mobil…</div>
+
+  <div id="loc" class="ui"><svg class="ic" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0119 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
+    <div><div id="kec">Mencari lokasi…</div><div id="kab"></div></div></div>
+
+  <div id="doa" class="ui off" aria-live="polite"><div class="salam" id="salam">Assalamu'alaikum, Mas</div><div class="jd">Doa naik kendaraan</div>
+    <div class="ar" dir="rtl" lang="ar">سُبْحٰنَ الَّذِيْ سَخَّرَ لَنَا هٰذَا وَمَا كُنَّا لَهٗ مُقْرِنِيْنَۙ وَاِنَّآ اِلٰى رَبِّنَا لَمُنْقَلِبُوْنَ</div>
+    <div class="lt">Subḥānal-lażī sakhkhara lanā hāżā wa mā kunnā lahū muqrinīn(a). Wa innā ilā rabbinā lamunqalibūn(a).</div>
+    <div class="tr">Maha Suci Zat yang telah menundukkan (semua) ini bagi kami, padahal kami sebelumnya tidak mampu menguasainya. Sesungguhnya kami pasti akan kembali kepada Tuhan kami.</div>
+    <div class="src">QS. Az-Zukhruf [43]: 13–14 · Terjemahan Kemenag RI</div></div>
+
+  <div id="status" class="ui">
+    <div class="kiri"><div class="adz" id="adz"><svg class="ic" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 119.5 4a6.5 6.5 0 0010.5 10.5z"/></svg><span id="pName">Isya</span> <b class="glow" id="pTime">--:--</b></div>
+      <div id="cd"></div>
+      <div class="cu off" id="cu"><svg class="ic" viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 00.6-7.95A6 6 0 006.1 9.1 4.5 4.5 0 007 18z"/></svg><span id="wx"></span></div></div>
+    <div class="kanan"><div id="jam" class="glow">--:--</div><div id="tgl"></div><div id="hij"></div></div>
+  </div>
+
+  <div id="slot" class="ui">
+    <button id="bWaze" aria-label="Buka Waze di sisi kanan"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg>Waze</button>
+    <button id="bYT" aria-label="Buka YouTube di sisi kanan"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3z"/></svg>YouTube</button>
+    <div id="panel" role="region" aria-label="Panel aplikasi"><button class="x" id="panelX" aria-label="Tutup panel">✕</button><b id="panelT"></b><span id="panelD"></span></div>
+  </div>
+
+  <div id="media" class="ui kosong">
+    <div id="mPlay">
+      <div class="mus"><div class="cover" id="cover"><svg class="ic" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
+        <div style="min-width:0"><div class="srcchip" id="msrc">Musik</div><div id="judul">—</div><div id="artis"></div></div></div>
+      <div class="bar"><i id="prog"></i></div><div class="wkt"><span id="tPos">0:00</span><span id="tDur">0:00</span></div>
+      <div class="ctl"><button id="mPrev" aria-label="Lagu sebelumnya"><svg viewBox="0 0 24 24"><path d="M19 5v14L8 12zM5 5v14"/></svg></button>
+        <button class="play" id="mPP" aria-label="Putar atau jeda"><svg viewBox="0 0 24 24" id="ppIc"><path d="M9 6v12M15 6v12"/></svg></button>
+        <button id="mNext" aria-label="Lagu berikutnya"><svg viewBox="0 0 24 24"><path d="M5 5v14l11-7zM19 5v14"/></svg></button></div>
+    </div>
+    <div id="mEmpty"><div class="bis glow">Bismillah, hati-hati di jalan.</div>
+      <div class="srcs">
+        <button data-src="spotify" aria-label="Buka Spotify"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7.5 9.5c3-1 6.5-.6 9 .8M8 12.6c2.4-.7 5.2-.4 7.2.7M8.6 15.5c1.9-.5 3.9-.3 5.6.5"/></svg>Spotify</button>
+        <button data-src="radio" aria-label="Buka Radio"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8l9-5"/><circle cx="16" cy="14" r="2.5"/></svg>Radio</button>
+        <button data-src="musik" aria-label="Buka Musik"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Musik</button>
+      </div></div>
+  </div>
+
+  <nav id="dock" class="ui" aria-label="Dock"></nav>
+  <div id="dim"></div>
+
+  <div class="pop" id="popApps" role="dialog" aria-modal="true" aria-label="Aplikasi"><div class="sheet">
+    <header><h2>Aplikasi</h2><button class="x" data-close aria-label="Tutup">✕</button></header>
+    <h3>Terakhir dipakai</h3><div class="grid" id="recent"></div>
+    <h3>Semua aplikasi</h3><div class="grid" id="allApps"></div>
+    <p class="hint">Tekan lama ikon untuk memasangnya ke dock.</p></div></div>
+
+  <div class="pop" id="popPick" role="dialog" aria-modal="true" aria-label="Pilih aplikasi dock"><div class="sheet">
+    <header><h2 id="pickT">Ganti ikon dock</h2><button class="x" data-close aria-label="Tutup">✕</button></header>
+    <div class="grid" id="pickGrid"></div></div></div>
+
+  <div class="pop" id="popTema" role="dialog" aria-modal="true" aria-label="Pengaturan tema"><div class="sheet">
+    <header><h2>Tema launcher</h2><button class="x" data-close aria-label="Tutup">✕</button></header>
+    <div class="tabs" role="tablist"><button role="tab" data-tab="tampilan" aria-selected="true">Tampilan</button><button role="tab" data-tab="mobil" aria-selected="false">Mobil</button><button role="tab" data-tab="sistem" aria-selected="false">Sistem</button></div>
+    <section data-pane="tampilan">
+      <h3>Wallpaper</h3><div class="row" id="walls"></div>
+      <div class="row" style="margin-top:10px"><button class="chip" id="tGerak" aria-pressed="true">Gerak wallpaper</button></div>
+      <h3>Warna aksen</h3><div class="row" id="accents"></div>
+      <h3>Format jam</h3><div class="row"><button class="chip" data-fmt="24">24 jam</button><button class="chip" data-fmt="12">12 jam</button></div>
+    </section>
+    <section data-pane="mobil" hidden>
+      <h3>Sudut kamera</h3><div class="row" id="views"></div>
+      <h3>Mobil</h3><div class="row">
+        <button class="chip" id="tLampu" aria-pressed="false">Lampu</button>
+        <button class="chip" id="tPutar" aria-pressed="false">Meja putar</button>
+        <button class="chip" id="tFoto">Mode foto</button>
+        <button class="chip" id="tBeep" aria-pressed="true">Bunyi peringatan &gt;100</button></div>
+      <h3>Pelat nomor</h3><div class="row" id="plates"></div>
+      <div class="row inrow" id="plateEdit" hidden>
+        <label>Nomor<input id="plNo" maxlength="12" placeholder="AD 1234 XY" autocomplete="off"></label>
+        <label>Berlaku<input id="plExp" maxlength="5" placeholder="03.27" autocomplete="off"></label>
+        <span class="hint" style="margin:0 0 14px">Tersimpan otomatis</span></div>
+    </section>
+    <section data-pane="sistem" hidden>
+      <h3>Nama sapaan</h3><div class="row inrow"><label>Nama<input id="nama" maxlength="20" autocomplete="off"></label><button class="chip" id="namaSave">Simpan</button></div>
+      <h3>Perawatan</h3><div class="row">
+        <button class="chip" id="tPerf" aria-pressed="false">Info FPS &amp; RAM</button>
+        <button class="chip" id="tCache">Bersihkan cache</button>
+        <button class="chip warn" id="tReset">Reset semua pengaturan</button></div>
+      <h3>Tentang</h3>
+      <div class="about"><b>Luxio VARIO Launcher</b> <span id="ver">versi pratinjau</span><br>
+        Suara doa: Mishary Rashid Alafasy, via everyayah.com · Teks terjemahan: Kemenag RI<br>
+        Cuaca: BMKG (Badan Meteorologi, Klimatologi, dan Geofisika) · Mesin 3D: three.js (MIT) · Huruf: Overpass (OFL)</div>
+    </section>
+    <p class="hint">Pengaturan tersimpan otomatis.</p></div></div>
+
+  <div class="pop" id="popConfirm" role="alertdialog" aria-modal="true" aria-labelledby="cfT"><div class="sheet small">
+    <h2 id="cfT"></h2><p id="cfD" class="hint" style="font-size:17px"></p>
+    <div class="row" style="justify-content:flex-end;margin-top:18px"><button class="chip" data-close>Batal</button><button class="chip warn" id="cfOk">Ya, lanjutkan</button></div></div></div>
+
+  <div id="homeBanner" class="ui" hidden><span>Launcher ini bukan Home bawaan lagi.</span><button class="chip" id="bHome">Jadikan Home lagi</button></div>
+  <div id="perf" class="ui" hidden></div>
+  <button class="chip" id="fotoExit">Keluar mode foto</button>
+  <input type="file" id="filePick" accept="image/*" hidden>
+  <div id="toast" role="status"></div>
+</div></div>
+<div id="simbar" hidden><span>Simulasi</span>
+  <button data-sim="0">0</button><button data-sim="40">40</button><button data-sim="90">90</button><button data-sim="110">110</button>
+  <button id="simKota" aria-pressed="false">Lampu kota</button><button id="simHujan" aria-pressed="false">Hujan</button>
+  <button id="simBelok">Belok</button><button id="simLagu">Lagu</button><button id="simNav">Navigasi</button><button id="simHome">Bukan Home</button></div>
+<div id="rot">Putar HP ke posisi mendatar untuk tampilan lebih besar</div>
+<script>
+(function(){const a=document.getElementById('app'),r=document.getElementById('rot');
+function fit(){const st=document.getElementById('stage'),sb=document.getElementById('simbar'),W=st.clientWidth,H=st.clientHeight-(sb&&!sb.hidden?56:0),s=Math.min(W/1280,H/800);
+  a.style.transform=`translate(${(W-1280*s)/2}px,${(H-800*s)/2}px) scale(${s})`;a.dataset.scale=s;r.style.display=(H>W)?'block':'none';}
+window.__fit=fit;addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,200));fit();})();
+</script>
+<script type="importmap">{"imports":{"three":"./lib/three.module.js","three/addons/":"./lib/addons/"}}</script>
+<script type="module" src="app.js"></script>
+</body></html>

@@ -1,0 +1,38 @@
+plugins {
+    id 'com.android.application'
+}
+
+def nomor = (System.getenv('GITHUB_RUN_NUMBER') ?: '1') as int
+
+android {
+    namespace 'com.luxio.launcher'
+    compileSdk 34
+
+    defaultConfig {
+        applicationId 'com.luxio.launcher'
+        minSdk 26
+        targetSdk 34
+        versionCode nomor
+        versionName "2.0.$nomor"
+    }
+
+    // satu kunci tetap, supaya versi baru bisa dipasang menimpa versi lama
+    signingConfigs {
+        luxio {
+            storeFile file('luxio.jks')
+            storePassword 'luxio-launcher'
+            keyAlias 'luxio'
+            keyPassword 'luxio-launcher'
+        }
+    }
+    buildTypes {
+        release { minifyEnabled false; signingConfig signingConfigs.luxio }
+        debug { signingConfig signingConfigs.luxio }
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+    androidResources { noCompress 'webp', 'mp3', 'jpg', 'glb', 'woff2' }
+    lint { checkReleaseBuilds false; abortOnError false }
+}
