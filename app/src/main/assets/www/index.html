@@ -16,10 +16,10 @@ body{font-family:Overpass,system-ui,sans-serif;color:var(--ink);font-variant-num
 #stage{position:fixed;inset:0;overflow:hidden}
 #app{position:absolute;left:0;top:0;width:1280px;height:800px;transform-origin:0 0;overflow:hidden;background:#07090c}
 #bg{position:absolute;inset:0;background:radial-gradient(90% 80% at 32% 58%,#2a3442 0%,#121820 50%,#07090c 100%);background-size:cover;background-position:center;transition:opacity .6s}
-#hud{position:absolute;left:470px;top:505px;width:340px;height:170px;transform:perspective(520px) rotateX(48deg);transform-origin:50% 100%;touch-action:none}
+#hud{position:absolute;left:470px;bottom:125px;width:340px;height:170px;transform:perspective(520px) rotateX(48deg);transform-origin:50% 100%;touch-action:none}
 #wallfx-wrap{position:absolute;inset:0;display:none}#wallfx-wrap.on{display:block}#wallfx{width:1280px;height:800px}
 #halo{position:absolute;inset:0;pointer-events:none;transition:background 3s}
-#gl{position:absolute;inset:0;width:1280px;height:800px;touch-action:none}
+#gl{position:absolute;left:0;top:0;width:1280px;height:100%;touch-action:none}
 #dim{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity 2.5s}
 .glow{color:var(--glow);font-weight:800;text-shadow:0 0 18px rgba(var(--acc-rgb),.85),0 0 4px rgba(var(--acc-rgb),.6)}
 svg.ic{stroke:var(--acc);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
@@ -123,7 +123,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 #toast.on{opacity:1;transform:translateX(-50%)}
 #fotoExit{position:absolute;right:30px;top:24px;z-index:25;display:none}
 #app.foto #fotoExit{display:inline-flex}
-#loading{position:absolute;left:330px;top:400px;font-size:16px;color:var(--dim)}
+#loading{position:absolute;left:330px;top:50%;font-size:16px;color:var(--dim)}
 #simbar{position:fixed;left:0;right:0;bottom:0;height:56px;display:flex;align-items:center;gap:6px;padding:0 8px;background:#0b0f14;border-top:1px solid #1d2733;overflow-x:auto;font:600 14px Overpass,sans-serif;color:#9fb3c8;z-index:50}
 #simbar[hidden]{display:none}
 #simbar span{padding:0 6px;color:#6f8399;flex:none}
@@ -149,8 +149,8 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 #perf{position:absolute;left:330px;top:34px;font:700 15px Overpass;color:var(--glow);letter-spacing:.04em;background:rgba(10,14,20,.6);border:1px solid var(--line);border-radius:14px;padding:6px 14px}
 #perf[hidden]{display:none}
 #doa .salam{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px}
-#hud{transition:transform .5s ease,top .5s ease,left .5s ease}
-#app.dockoff #hud{top:560px;transform:perspective(520px) rotateX(48deg) scale(1.4)}
+#hud{transition:transform .5s ease,bottom .5s ease,left .5s ease}
+#app.dockoff #hud{bottom:70px;transform:perspective(520px) rotateX(48deg) scale(1.4)}
 .holding{transform:scale(1.12)!important;transition:transform .45s ease;filter:drop-shadow(0 0 10px rgba(var(--acc-rgb),.9))}
 #loc.nogps svg{stroke:#8a94a0;animation:pulse 1.6s ease-in-out infinite}
 .wxsrc{font-size:12px;color:var(--dim);margin-left:6px;letter-spacing:.06em}
@@ -287,8 +287,12 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 <div id="rot">Putar HP ke posisi mendatar untuk tampilan lebih besar</div>
 <script>
 (function(){const a=document.getElementById('app'),r=document.getElementById('rot');
-function fit(){const st=document.getElementById('stage'),sb=document.getElementById('simbar'),W=st.clientWidth,H=st.clientHeight-(sb&&!sb.hidden?56:0),s=Math.min(W/1280,H/800);
-  a.style.transform=`translate(${(W-1280*s)/2}px,${(H-800*s)/2}px) scale(${s})`;a.dataset.scale=s;r.style.display=(H>W)?'block':'none';}
+// Lebar selalu penuh 1280; tinggi panggung mengikuti tinggi yang tersedia (700–800), misalnya 736 bila bilah
+// sistem vendor HU tidak bisa disembunyikan. Hanya bila layar terlalu pendek, panggung dikecilkan.
+function fit(){const st=document.getElementById('stage'),sb=document.getElementById('simbar'),W=st.clientWidth,H=st.clientHeight-(sb&&!sb.hidden?56:0);
+  let s=W/1280,ah=H/s;if(ah>800)ah=800;if(ah<700){ah=700;s=H/700;}ah=Math.round(ah);
+  a.style.height=ah+'px';a.style.transform=`translate(${(W-1280*s)/2}px,${(H-ah*s)/2}px) scale(${s})`;a.dataset.scale=s;
+  if(a.dataset.h!==String(ah)){a.dataset.h=ah;dispatchEvent(new CustomEvent('appresize',{detail:ah}));}r.style.display=(H>W)?'block':'none';}
 window.__fit=fit;addEventListener('resize',fit);addEventListener('orientationchange',()=>setTimeout(fit,200));fit();})();
 </script>
 <script type="importmap">{"imports":{"three":"./lib/three.module.js","three/addons/":"./lib/addons/"}}</script>

@@ -302,8 +302,10 @@ scene.add(new THREE.HemisphereLight(0xffffff,0x444444,0.25));
 const key=new THREE.SpotLight(0xffffff,120,30,0.6,0.7,1.2);key.position.set(2,7,4);scene.add(key);
 const rim=new THREE.SpotLight(0x7fb6ff,70,30,0.5,0.8,1.2);rim.position.set(-5,4,-5);scene.add(rim);
 const camera=new THREE.PerspectiveCamera(30,1280/800,0.1,100);
-camera.setViewOffset(1280,800,235,-50,1280,800);
-const HOME=[6.9,2.3,7.5],TGT=[0,0.8,0];camera.position.set(...HOME);
+let appH=800;
+function sizeGL(){appH=+app.dataset.h||800;renderer.setSize(1280,appH,false);camera.aspect=1280/appH;camera.setViewOffset(1280,appH,235,-50*appH/800,1280,appH);camera.updateProjectionMatrix();}
+addEventListener('appresize',()=>{sizeGL();need();});
+const HOME=[6.9,2.3,7.5],TGT=[0,0.8,0];camera.position.set(...HOME);sizeGL();
 const controls=new OrbitControls(camera,canvas);controls.target.set(...TGT);
 controls.enableDamping=true;controls.enablePan=false;controls.minDistance=5;controls.maxDistance=14;controls.maxPolarAngle=Math.PI*0.47;controls.rotateSpeed=0.6;controls.autoRotateSpeed=0.8;
 controls.update();controls.addEventListener('change',need);

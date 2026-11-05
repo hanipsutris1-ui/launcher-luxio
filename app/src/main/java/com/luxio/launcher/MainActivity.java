@@ -108,6 +108,8 @@ public class MainActivity extends Activity {
         am = (AudioManager) getSystemService(AUDIO_SERVICE);
         getWindow().setStatusBarColor(0xff07090c);
         getWindow().setNavigationBarColor(0xff07090c);
+        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        if (Build.VERSION.SDK_INT >= 28) getWindow().getAttributes().layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
 
         root = new FrameLayout(this);
         web = new WebView(this);
@@ -160,6 +162,7 @@ public class MainActivity extends Activity {
         });
         root.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(root);
+        layarPenuh();
         java.io.File fi = fileInstan();
         if (fi.exists()) {
             Bitmap g = BitmapFactory.decodeFile(fi.getAbsolutePath());
@@ -194,6 +197,27 @@ public class MainActivity extends Activity {
         mulaiMedia();
         h.post(detak);
     }
+
+    /** Sembunyikan bilah status & navigasi (immersive). Bila bilah vendor HU tetap tampil,
+     *  halaman menyesuaikan tinggi yang tersedia (lihat fit() di index.html). */
+    @SuppressWarnings("deprecation")
+    void layarPenuh() {
+        try {
+            View d = getWindow().getDecorView();
+            d.setSystemUiVisibility(View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                    | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
+            if (Build.VERSION.SDK_INT >= 30) {
+                getWindow().setDecorFitsSystemWindows(false);
+                android.view.WindowInsetsController c = getWindow().getInsetsController();
+                if (c != null) {
+                    c.hide(android.view.WindowInsets.Type.statusBars() | android.view.WindowInsets.Type.navigationBars());
+                    c.setSystemBarsBehavior(android.view.WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                }
+            }
+        } catch (Exception e) { }
+    }
+
+    @Override public void onWindowFocusChanged(boolean fokus) { super.onWindowFocusChanged(fokus); if (fokus) layarPenuh(); }
 
     void lepasInstan() {
         if (instan == null) return;
@@ -247,6 +271,7 @@ public class MainActivity extends Activity {
     @Override protected void onResume() {
         super.onResume();
         tampil = true;
+        layarPenuh();
         if (!izinMusik) mulaiMedia();
         kirimHome();
         if (doaTunggu) {

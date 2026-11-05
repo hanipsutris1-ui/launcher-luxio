@@ -16,7 +16,7 @@
     <application
         android:label="Luxio VARIO"
         android:icon="@drawable/ikon"
-        android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen"
         android:hardwareAccelerated="true"
         android:allowBackup="false">
 
