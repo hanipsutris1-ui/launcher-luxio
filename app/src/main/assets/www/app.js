@@ -99,7 +99,7 @@ function tickUI(){
   const p=st.place;
   if(p){$('kec').textContent=p.kecamatan?`Kec. ${p.kecamatan}`:(p.kota||p.kabupaten||'Lokasi');
     $('kab').textContent=[p.kabupaten?`Kab. ${p.kabupaten}`:(p.kota?`Kota ${p.kota}`:''),p.provinsi].filter(Boolean).join(' · ');}
-  const hasWx=st.temp!=null;$('cu').classList.toggle('off',!hasWx);if(hasWx)$('wx').textContent=`${Math.round(st.temp)}°C · ${st.wx||''}`;
+  const hasWx=st.temp!=null;$('cu').classList.toggle('off',!hasWx);if(hasWx){$('wx').textContent=`${Math.round(st.temp)}°C · ${st.wx||''}`;$('wxSrc').textContent=st.wxSrc||'';}
 }
 setInterval(tickUI,1000);
 setInterval(()=>{const lock=(SIM&&st.simGps)||(st.gps&&performance.now()-(st.gpsAt||0)<5000);$('loc').classList.toggle('nogps',!lock);},1000);
@@ -174,8 +174,10 @@ window.vario={onEvent(e){
   else if(e.type==='place'){st.place=e;cfg.lastKota=e;save();}
   else if(e.type==='lampu'){st.lampuKota=!!e.on;cfg.lampuKota=st.lampuKota;cfg.lights=null;save();updDim();applyLights&&applyLights();need();}
   else if(e.type==='home'){$('homeBanner').hidden=!!e.isDefault;}
-  else if(e.type==='weather'){st.temp=e.temp;st.wx=e.desc||'';st.rain=!!e.rain||/hujan/i.test(e.desc||'');need();}
+  else if(e.type==='weather'){st.temp=e.temp;st.wx=e.desc||'';st.wxSrc=e.src||'';st.rain=!!e.rain||/hujan/i.test(e.desc||'');need();}
   else if(e.type==='media'){setMedia(e.active===false?null:e);}
+  else if(e.type==='panel'){st.ytOpen=!!e.open;$('slot').classList.toggle('yt',st.ytOpen);}
+  else if(e.type==='split'){st.splitOk=!!e.ok;}
   else if(e.type==='nav'){if(e.active&&!st.nav)openWaze(true);st.nav=!!e.active;}
   else if(e.type==='wallpaper'){if(e.data)setGaleri(e.data);}
   tickUI();}};
@@ -247,24 +249,27 @@ function showPick(){const g=$('pickGrid');g.innerHTML='';
 function slotRect(){const r=$('slot').getBoundingClientRect();return [r.left,r.top,r.width,r.height].map(Math.round);}
 function showPanel(t,d){$('panelT').textContent=t;$('panelD').textContent=d;$('panel').classList.add('on');}
 $('panelX').addEventListener('click',()=>{$('panel').classList.remove('on');call('hideWebPanel');});
-function openWaze(auto){const ok=call('openSplit','com.waze');
+function openWaze(auto){if(st.ytOpen)call('hideWebPanel');const ok=call('openSplit','com.waze');
   if(ok===true)return;if(bridge){openApp('com.waze','Waze');return;}
   showPanel('Waze',auto?'Navigasi aktif. Di HU, Waze tampil di sisi kanan lewat split-screen (bila ROM mendukung).':'Di HU, Waze dibuka di sisi kanan lewat split-screen. Bila ROM tidak mendukung, Waze dibuka layar penuh.');}
-function openYT(){if(bridge&&bridge.showWebPanel){call('showWebPanel','https://m.youtube.com',...slotRect());return;}
+function openYT(){if(bridge&&bridge.showWebPanel){if(st.ytOpen){call('hideWebPanel');return;}call('showWebPanel','https://m.youtube.com',...slotRect());return;}
   showPanel('YouTube','Di HU, YouTube versi web tampil di kotak ini (butuh internet).');}
 $('bWaze').addEventListener('click',()=>openWaze());$('bYT').addEventListener('click',()=>openYT());
 
 // ---------- media universal (MediaSession) ----------
-const SRC={spotify:['Spotify','com.spotify.music'],radio:['Radio','com.tw.radio'],musik:['Musik','com.tw.music']};
-document.querySelectorAll('.srcs button').forEach(b=>b.addEventListener('click',()=>{const [l,p]=SRC[b.dataset.src];openApp(p,l);if(SIM)setMedia({app:l,title:'Contoh lagu',artist:'Nama artis',pos:84000,dur:221000,playing:true});}));
+const SRC={spotify:['Spotify','com.spotify.music'],radio:['Radio','com.navimods.radio_free'],musik:['Musik','com.tw.music']};
+document.querySelectorAll('.srcs button,.srcmini button').forEach(b=>b.addEventListener('click',()=>{const [l,p]=SRC[b.dataset.src];openApp(p,l);if(SIM)setMedia({app:l,title:'Contoh lagu',artist:'Nama artis',pos:84000,dur:221000,playing:true});}));
 const fmtT=ms=>{const s=Math.max(0,Math.round(ms/1000));return `${Math.floor(s/60)}:${pad(s%60)}`;};
 const PP={play:'<path d="M8 5v14l11-7z"/>',pause:'<path d="M9 6v12M15 6v12"/>'};
-function setMedia(m){st.media=m?{...st.media,...m,t0:performance.now()}:null;$('media').classList.toggle('kosong',!m);if(!m)return;
+function setMedia(m){const was=st.media&&st.media.playing;st.media=m?{...st.media,...m,t0:performance.now()}:null;
+  if(st.media&&!st.media.playing&&(was||!st.media.pauseAt))st.media.pauseAt=Date.now();if(st.media&&st.media.playing)st.media.pauseAt=0;
+  mediaFace();if(!m)return;
   const x=st.media;$('judul').textContent=x.title||'—';$('artis').textContent=x.artist||'';
   $('msrc').textContent=x.bt?`Bluetooth · ${x.bt}`:(x.app||'Musik');
   $('cover').innerHTML=x.art?`<img src="${x.art}" alt="">`:'<svg class="ic" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
   $('ppIc').innerHTML=x.playing?PP.pause:PP.play;updProg();}
-function updProg(){const x=st.media;if(!x)return;let pos=x.pos||0;if(x.playing)pos+=performance.now()-x.t0;if(x.dur)pos=Math.min(pos,x.dur);
+function mediaFace(){const x=st.media,idle=!x||(!x.playing&&x.pauseAt&&Date.now()-x.pauseAt>300000);$('media').classList.toggle('kosong',!!idle);}
+function updProg(){mediaFace();const x=st.media;if(!x)return;let pos=x.pos||0;if(x.playing)pos+=performance.now()-x.t0;if(x.dur)pos=Math.min(pos,x.dur);
   $('prog').style.width=x.dur?`${pos/x.dur*100}%`:'0';$('tPos').textContent=fmtT(pos);$('tDur').textContent=x.dur?fmtT(x.dur):'';}
 setInterval(updProg,1000);
 function mctl(c){call('mediaControl',c);if(SIM&&st.media){if(c==='play'||c==='pause')setMedia({pos:(st.media.pos||0)+(st.media.playing?performance.now()-st.media.t0:0),playing:c==='play'});else toast(c==='next'?'Lagu berikutnya':'Lagu sebelumnya');}}
@@ -491,7 +496,7 @@ app.addEventListener('click',e=>{if(e.target.closest('button'))call('klik');},tr
 // 3D berhenti total saat launcher tidak terlihat (kamera mundur, aplikasi lain, layar mati)
 document.addEventListener('visibilitychange',()=>{if(document.hidden)renderer.setAnimationLoop(null);else{renderer.setAnimationLoop(loop);need();}});
 // dipanggil Android: tombol Back dan layar menyala lagi
-window.kembali=()=>{if(document.querySelector('.pop.on')){closePop();return;}if(app.classList.contains('foto')){app.classList.remove('foto');need();return;}if($('panel').classList.contains('on')){$('panelX').click();}};
+window.kembali=()=>{if(document.querySelector('.pop.on')){closePop();return;}if(app.classList.contains('foto')){app.classList.remove('foto');need();return;}if(st.ytOpen){call('hideWebPanel');return;}if($('panel').classList.contains('on')){$('panelX').click();}};
 window.tampilDoa=()=>showDoa();
 // ---------- mulai ----------
 {const now=new Date(),h=now.getHours()+now.getMinutes()/60,t=prayerTimes(now,st.lat,st.lon,tzH);

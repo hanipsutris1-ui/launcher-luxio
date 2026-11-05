@@ -16,8 +16,6 @@ import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
-import android.location.Address;
-import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -74,6 +72,7 @@ public class MainActivity extends Activity {
     final Handler h = new Handler(Looper.getMainLooper());
     FrameLayout root;
     WebView web, panel;
+    android.widget.TextView tutupPanel;
     boolean siap, tampil, doaTunggu;
     long layarMati, waktuTunggu;
 
@@ -84,6 +83,10 @@ public class MainActivity extends Activity {
     double lat, lon;
     long fixTerakhir;
     Location lokasiGeo;
+    Wilayah wil;
+    String adm4 = "";
+    long cuacaAkhir;
+    final Object kunciWil = new Object();
 
     MediaSessionManager msm;
     MediaController ctl;
@@ -139,6 +142,9 @@ public class MainActivity extends Activity {
             @Override public void onPageFinished(WebView v, String url) {
                 siap = true;
                 kirimGps(); kirimMedia(true); kirimHome();
+                if (pref.contains("lat") && lokasiGeo == null) geocode(pref.getFloat("lat", 0), pref.getFloat("lon", 0));
+                String cu = pref.getString("cuaca", null);
+                if (cu != null) js("window.vario&&vario.onEvent(" + cu + ")");
                 if (doaPertama) doaPertama = false;   // doa pertama diputar oleh halaman setelah mobil dimuat
             }
             @Override public boolean shouldOverrideUrlLoading(WebView v, WebResourceRequest r) {
@@ -309,6 +315,7 @@ public class MainActivity extends Activity {
             laju = l.hasSpeed() ? l.getSpeed() : 0f;
             if (l.hasBearing()) arah = l.getBearing();
             lat = l.getLatitude(); lon = l.getLongitude();
+            pref.edit().putFloat("lat", (float) lat).putFloat("lon", (float) lon).apply();
             boolean akurat = !l.hasAccuracy() || l.getAccuracy() <= 30;
             if (akhir != null && akurat && laju * 3.6f >= 3) {
                 float d = akhir.distanceTo(l);
@@ -338,31 +345,32 @@ public class MainActivity extends Activity {
         return s.regionMatches(true, 0, awalan, 0, awalan.length()) ? s.substring(awalan.length()).trim() : s;
     }
 
+    /** kelurahan terdekat dari data offline -> nama lokasi; lalu cuaca BMKG tiap 45 menit / pindah kelurahan */
     void geocode(final double glat, final double glon) {
         new Thread(() -> {
             try {
-                List<Address> res = new Geocoder(this, new Locale("id", "ID")).getFromLocation(glat, glon, 1);
-                if (res == null || res.isEmpty()) return;
-                Address a = res.get(0);
-                JSONObject o = new JSONObject();
-                o.put("type", "place");
-                String kec = a.getLocality() != null ? a.getLocality() : a.getSubLocality();
-                if (kec != null) o.put("kecamatan", buang(buang(kec, "Kecamatan"), "Kec."));
-                String sub = a.getSubAdminArea();
-                if (sub != null) {
-                    if (sub.toLowerCase(Locale.ROOT).startsWith("kota")) o.put("kota", buang(sub, "Kota"));
-                    else o.put("kabupaten", buang(buang(sub, "Kabupaten"), "Kab."));
+                synchronized (kunciWil) { if (wil == null) wil = Wilayah.muat(this); }
+                if (wil == null) return;
+                int i = wil.terdekat(glat, glon);
+                if (i < 0) return;
+                JSONObject t = wil.tempat(i);
+                event(t);
+                String kode = t.getString("adm4");
+                boolean baru = !kode.equals(adm4);
+                if (baru || System.currentTimeMillis() - cuacaAkhir > 45 * 60000L) {
+                    adm4 = kode;
+                    JSONObject c = Wilayah.cuacaBmkg(kode);
+                    if (c != null) { cuacaAkhir = System.currentTimeMillis(); event(c); pref.edit().putString("cuaca", c.toString()).apply(); }
                 }
-                if (a.getAdminArea() != null) o.put("provinsi", a.getAdminArea());
-                event(o);
-            } catch (Exception e) { }   // geocoder butuh internet; tanpa itu launcher memakai lokasi terakhir
-        }, "luxio-geocode").start();
+            } catch (Exception e) { }
+        }, "luxio-wilayah").start();
     }
 
     final Runnable detak = new Runnable() {
         @Override public void run() {
             kirimGps();
             if (ctl != null) kirimMedia(false);
+            if (siap && lokasiGeo != null && System.currentTimeMillis() - cuacaAkhir > 45 * 60000L) { cuacaAkhir = System.currentTimeMillis() - 40 * 60000L; geocode(lat, lon); }
             h.postDelayed(this, 1000);
         }
     };
@@ -473,6 +481,11 @@ public class MainActivity extends Activity {
         if (samping) it.addFlags(Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
         final Intent fi = it;
         h.post(() -> { try { startActivity(fi); } catch (Exception e) { } });
+        if (samping) h.postDelayed(() -> {
+            boolean ok = isInMultiWindowMode();
+            try { JSONObject o = new JSONObject(); o.put("type", "split"); o.put("ok", ok); o.put("pkg", pkg); event(o); } catch (Exception e) { }
+            if (!ok) Toast.makeText(MainActivity.this, "HU tidak mendukung layar terbagi, aplikasi dibuka layar penuh", Toast.LENGTH_LONG).show();
+        }, 1800);
         return true;
     }
 
@@ -489,7 +502,7 @@ public class MainActivity extends Activity {
     /* ===== panel web YouTube di area kanan ===== */
     void tampilPanel(String url, int x, int y, int w, int hh) {
         float dpr = getResources().getDisplayMetrics().density;
-        float sk = web.getScale() > 0 ? web.getScale() : dpr;
+        float sk = dpr;
         if (panel == null) {
             panel = new WebView(this);
             panel.setBackgroundColor(Color.BLACK);
@@ -498,12 +511,41 @@ public class MainActivity extends Activity {
             panel.setWebViewClient(new WebViewClient());
             panel.setWebChromeClient(new WebChromeClient());
             root.addView(panel);
+            tutupPanel = new android.widget.TextView(this);
+            tutupPanel.setText("✕"); tutupPanel.setTextSize(22); tutupPanel.setTextColor(Color.WHITE);
+            tutupPanel.setGravity(android.view.Gravity.CENTER);
+            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+            bg.setShape(android.graphics.drawable.GradientDrawable.OVAL); bg.setColor(0xcc101418); bg.setStroke(2, 0x66ffffff);
+            tutupPanel.setBackground(bg);
+            tutupPanel.setContentDescription("Tutup panel");
+            tutupPanel.setOnClickListener(v -> { v.playSoundEffect(SoundEffectConstants.CLICK); sembunyiPanel(); });
+            root.addView(tutupPanel);
         }
+        int t = Math.round(52 * sk);
+        FrameLayout.LayoutParams lt = new FrameLayout.LayoutParams(t, t);
+        lt.leftMargin = Math.round((x + w - 60) * sk); lt.topMargin = Math.round((y + 8) * sk);
+        tutupPanel.setLayoutParams(lt); tutupPanel.setVisibility(View.VISIBLE); tutupPanel.bringToFront();
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(Math.round(w * sk), Math.round(hh * sk));
         lp.leftMargin = Math.round(x * sk); lp.topMargin = Math.round(y * sk);
         panel.setLayoutParams(lp);
         panel.setVisibility(View.VISIBLE);
-        if (panel.getUrl() == null) panel.loadUrl(url);
+        panel.onResume();
+        String u = panel.getUrl();
+        if (u == null || u.startsWith("about:")) panel.loadUrl(url);
+        tutupPanel.bringToFront();
+        kirimPanel(true);
+    }
+
+    void sembunyiPanel() {
+        if (panel == null) return;
+        panel.loadUrl("about:blank");        // suara YouTube ikut berhenti
+        panel.setVisibility(View.GONE);
+        if (tutupPanel != null) tutupPanel.setVisibility(View.GONE);
+        kirimPanel(false);
+    }
+
+    void kirimPanel(boolean buka) {
+        try { JSONObject o = new JSONObject(); o.put("type", "panel"); o.put("open", buka); event(o); } catch (Exception e) { }
     }
 
     /** Fungsi yang dipanggil index.html lewat window.VarioBridge */
@@ -513,7 +555,7 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public boolean openSplit(String pkg) { return buka(pkg, true); }
         @JavascriptInterface public void showWebPanel(String url, int x, int y, int w, int hh) { h.post(() -> tampilPanel(url, x, y, w, hh)); }
-        @JavascriptInterface public void hideWebPanel() { h.post(() -> { if (panel != null) { panel.setVisibility(View.GONE); panel.onPause(); } }); }
+        @JavascriptInterface public void hideWebPanel() { h.post(MainActivity.this::sembunyiPanel); }
 
         @JavascriptInterface public String getApps() {
             JSONArray out = new JSONArray();
