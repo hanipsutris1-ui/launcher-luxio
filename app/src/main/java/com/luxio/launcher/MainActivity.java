@@ -96,6 +96,7 @@ public class MainActivity extends Activity {
     AudioFocusRequest fokus;
 
     static final int PILIH_GAMBAR = 7, PILIH_CADANGAN = 8;
+    long unduhId = -1;
     android.widget.ImageView instan;
     long detakJs, siapAt;
     java.io.File fileInstan() { return new java.io.File(getFilesDir(), "instan.jpg"); }
@@ -191,6 +192,7 @@ public class MainActivity extends Activity {
         l.addAction("net.easyconn.navi.night");
         l.addAction("net.easyconn.navi.daytime");
         daftar(lampuRx, l);
+        daftar(unduhRx, new IntentFilter(android.app.DownloadManager.ACTION_DOWNLOAD_COMPLETE));
 
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) mulaiGps();
         else requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
@@ -323,7 +325,7 @@ public class MainActivity extends Activity {
 
     @Override protected void onDestroy() {
         h.removeCallbacksAndMessages(null);
-        try { unregisterReceiver(layarRx); unregisterReceiver(paketRx); unregisterReceiver(lampuRx); } catch (Exception e) { }
+        try { unregisterReceiver(layarRx); unregisterReceiver(paketRx); unregisterReceiver(lampuRx); unregisterReceiver(unduhRx); } catch (Exception e) { }
         if (lm != null) lm.removeUpdates(dengarGps);
         if (ctl != null) ctl.unregisterCallback(ctlCb);
         if (msm != null) msm.removeOnActiveSessionsChangedListener(sesiBerubah);
@@ -357,6 +359,25 @@ public class MainActivity extends Activity {
 
     final BroadcastReceiver paketRx = new BroadcastReceiver() {
         @Override public void onReceive(Context c, Intent i) { js("window.muatApp&&muatApp()"); }
+    };
+
+    final BroadcastReceiver unduhRx = new BroadcastReceiver() {
+        @Override public void onReceive(Context c, Intent i) {
+            long id = i.getLongExtra(android.app.DownloadManager.EXTRA_DOWNLOAD_ID, -2);
+            if (id != unduhId) return;
+            unduhId = -1;
+            android.app.DownloadManager dm = (android.app.DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+            Uri u = dm.getUriForDownloadedFile(id);
+            if (u == null) { Toast.makeText(c, "Unduhan gagal, coba lagi", Toast.LENGTH_LONG).show(); return; }
+            if (Build.VERSION.SDK_INT >= 26 && !getPackageManager().canRequestPackageInstalls()) {
+                Toast.makeText(c, "Izinkan Luxio VARIO memasang aplikasi, lalu ketuk Unduh & pasang lagi", Toast.LENGTH_LONG).show();
+                bukaIntent(new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES, Uri.parse("package:" + getPackageName())));
+                return;
+            }
+            Intent pasang = new Intent(Intent.ACTION_VIEW).setDataAndType(u, "application/vnd.android.package-archive")
+                    .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+            try { startActivity(pasang); } catch (Exception e) { Toast.makeText(c, "Penginstal tidak bisa dibuka", Toast.LENGTH_LONG).show(); }
+        }
     };
 
     final BroadcastReceiver lampuRx = new BroadcastReceiver() {
@@ -717,6 +738,20 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void setHome() { bukaIntent(new Intent(Settings.ACTION_HOME_SETTINGS)); }
         @JavascriptInterface public String getVersion() {
             try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception e) { return ""; }
+        }
+        /** Unduh APK baru lewat DownloadManager lalu buka penginstal Android (pembaruan langsung dari launcher). */
+        @JavascriptInterface public boolean installUpdate(String url, String tag) {
+            try {
+                android.app.DownloadManager dm = (android.app.DownloadManager) getSystemService(DOWNLOAD_SERVICE);
+                android.app.DownloadManager.Request r = new android.app.DownloadManager.Request(Uri.parse(url))
+                        .setTitle("Luxio VARIO " + tag).setDescription("Pembaruan launcher")
+                        .setMimeType("application/vnd.android.package-archive")
+                        .setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                        .setDestinationInExternalPublicDir(android.os.Environment.DIRECTORY_DOWNLOADS, "LuxioVario/LuxioVario-" + tag + ".apk");
+                unduhId = dm.enqueue(r);
+                h.post(() -> Toast.makeText(MainActivity.this, "Mengunduh " + tag + "…", Toast.LENGTH_SHORT).show());
+                return true;
+            } catch (Exception e) { return false; }
         }
         @JavascriptInterface public void ready() {
             detakJs = SystemClock.elapsedRealtime(); siapAt = detakJs;

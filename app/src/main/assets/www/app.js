@@ -514,11 +514,14 @@ async function cekUpdate(manual){const vc=+(call('getVersionCode')||0);
     const baru=vc&&n>vc;
     $('updT').textContent=!vc?`Terbaru di GitHub: ${j.tag_name}`:(baru?`Versi baru ${j.tag_name} tersedia`:'Sudah versi terbaru');
     $('updNotes').hidden=!updInfo.notes;$('updNotes').textContent=updInfo.notes?`Catatan rilis ${j.tag_name}:\n${updInfo.notes}`:'';
+    $('tUpdGo').hidden=!baru;
     if(baru&&cfg.skipUpd!==n){$('updBT').textContent=`Versi baru ${j.tag_name} tersedia`;$('updBanner').hidden=false;}
   }catch(e){if(manual)$('updT').textContent='Gagal memeriksa (butuh internet)';}}
 $('tUpd').onclick=()=>cekUpdate(true);
-$('bUpd').onclick=()=>{$('updBanner').hidden=true;renderTema();openPop('popTema');document.querySelector('[data-tab="sistem"]').click();
-  if(updInfo&&updInfo.url)setTimeout(()=>confirmBox(`Unduh ${updInfo.tag}?`,'APK baru dibuka di browser. Setelah terunduh, pasang menimpa versi ini. Pengaturan tetap aman.',()=>{if(bridge)call('bukaUri',updInfo.url);else toast('Simulasi: membuka '+updInfo.url);}),300);};
+function pasangUpdate(){if(!updInfo||!updInfo.url)return;$('updBanner').hidden=true;
+  if(bridge&&bridge.installUpdate){if(call('installUpdate',updInfo.url,updInfo.tag)){toast(`Mengunduh ${updInfo.tag}… penginstal terbuka otomatis`);return;}}
+  if(bridge)call('bukaUri',updInfo.url);else toast('Simulasi: mengunduh '+updInfo.tag);}
+$('bUpd').onclick=pasangUpdate;$('tUpdGo').onclick=pasangUpdate;
 $('bUpdX').onclick=()=>{$('updBanner').hidden=true;if(updInfo){cfg.skipUpd=updInfo.n;save();}};
 setTimeout(()=>{if(bridge)cekUpdate(false);},20000);
 // ---------- pemulihan otomatis ----------

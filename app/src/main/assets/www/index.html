@@ -163,6 +163,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 #updBanner[hidden]{display:none}
 .notes{margin-top:10px;font-size:14.5px;line-height:1.6;color:var(--dim);white-space:pre-line;max-height:160px;overflow:auto;border-left:2px solid var(--acc);padding-left:12px}
 .notes[hidden]{display:none}
+.chip[hidden]{display:none}
 </style></head><body>
 <div id="stage"><div id="app">
   <div id="bg"></div><div id="wallfx-wrap"><canvas id="wallfx" width="1280" height="800"></canvas></div><div id="halo"></div>
@@ -252,7 +253,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
       <h3>Tentang</h3>
       <div class="about"><b>Luxio VARIO Launcher</b> <span id="ver">versi pratinjau</span></div>
       <h3>Pembaruan</h3>
-      <div class="row"><button class="chip" id="tUpd">Periksa pembaruan</button><span class="hint" id="updT" style="margin:0;align-self:center"></span></div>
+      <div class="row"><button class="chip" id="tUpd">Periksa pembaruan</button><button class="chip" id="tUpdGo" hidden>Unduh &amp; pasang</button><span class="hint" id="updT" style="margin:0;align-self:center"></span></div>
       <div class="notes" id="updNotes" hidden></div>
       <h3>Nama sapaan</h3><div class="row inrow"><label>Nama<input id="nama" maxlength="20" autocomplete="off"></label><button class="chip" id="namaSave">Simpan</button></div>
       <h3>Perawatan</h3><div class="row">
@@ -272,7 +273,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
     <h2 id="cfT"></h2><p id="cfD" class="hint" style="font-size:17px"></p>
     <div class="row" style="justify-content:flex-end;margin-top:18px"><button class="chip" data-close>Batal</button><button class="chip warn" id="cfOk">Ya, lanjutkan</button></div></div></div>
 
-  <div id="updBanner" class="ui" hidden><span id="updBT">Versi baru tersedia</span><button class="chip" id="bUpd">Lihat</button><button class="chip" id="bUpdX" aria-label="Nanti saja">Nanti</button></div>
+  <div id="updBanner" class="ui" hidden><span id="updBT">Versi baru tersedia</span><button class="chip" id="bUpd">Unduh &amp; pasang</button><button class="chip" id="bUpdX" aria-label="Nanti saja">Nanti</button></div>
   <div id="homeBanner" class="ui" hidden><span id="homeT">Launcher ini belum jadi Home bawaan.</span><button class="chip" id="bHome">Jadikan Home</button></div>
   <div id="perf" class="ui" hidden></div>
   <button class="chip" id="fotoExit">Keluar mode foto</button>
