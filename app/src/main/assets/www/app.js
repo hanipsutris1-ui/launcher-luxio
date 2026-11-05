@@ -276,7 +276,7 @@ $('mPrev').addEventListener('click',()=>mctl('prev'));$('mNext').addEventListene
 // ---------- doa saat HU menyala ----------
 // doa: suara Mishary Rashid Alafasy (QS 43:13 bagian doa + 43:14), teks tampil selama suara berjalan
 let doaAudio=null,doaOn=false;
-async function showDoa(){const d=$('doa');$('salam').textContent=`Assalamu'alaikum, ${cfg.nama||'Mas'}`;d.classList.remove('off');doaOn=true;let ms=12000;
+async function showDoa(){const d=$('doa');$('salam').textContent=`Assalamu'alaikum, ${cfg.nama||'Mas'}`;d.classList.remove('off');doaOn=true;updPerf();let ms=12000;
   {try{const src=(await import('./doa.js')).default;doaAudio=new Audio(src);doaAudio.volume=0.9;
       call('duckMusic',true);   // Android: kecilkan musik selama doa (audio focus)
       await doaAudio.play();ms=Math.max(ms,(doaAudio.duration||19.5)*1000+800);
