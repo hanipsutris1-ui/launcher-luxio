@@ -33,6 +33,6 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
-    androidResources { noCompress 'webp', 'mp3', 'jpg', 'glb', 'woff2' }
+    androidResources { noCompress 'webp', 'mp3', 'jpg', 'glb', 'woff2', 'lxw' }
     lint { checkReleaseBuilds false; abortOnError false }
 }

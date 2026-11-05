@@ -1,4 +1,4 @@
-"""Membuat assets/wilayah.bin.gz dari data geografis (github.com/drizki/geografis, MIT; kode wilayah Kemendagri = domain publik).
+"""Membuat assets/wilayah.lxw dari data geografis (github.com/drizki/geografis, MIT; kode wilayah Kemendagri = domain publik).
 Format (big-endian):
   'LXW1' | nProv u16 | prov* (utf8 \n) | nKab u16 | (provIdx u16 + nama) | nKec u16 | (kabIdx u16 + kodeKec 'NN.NN.NN' + nama) |
   nDesa u32 | desa* : lat i32 (x1e5), lon i32 (x1e5), kecIdx u16, akhiranKode u16 (4 digit desa)

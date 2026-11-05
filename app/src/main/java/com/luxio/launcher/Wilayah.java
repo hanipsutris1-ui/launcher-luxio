@@ -15,7 +15,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.zip.GZIPInputStream;
 
 /**
- * Data desa/kelurahan seluruh Indonesia (assets/wilayah.bin.gz, dibuat oleh tools/buat_wilayah.py)
+ * Data desa/kelurahan seluruh Indonesia (assets/wilayah.lxw (isi gzip), dibuat oleh tools/buat_wilayah.py)
  * untuk mencari kelurahan terdekat dari GPS tanpa internet, lalu mengambil prakiraan cuaca BMKG
  * yang memakai kode kelurahan (adm4).
  */
@@ -26,7 +26,7 @@ class Wilayah {
     int n;
 
     static Wilayah muat(Context c) {
-        try (InputStream raw = c.getAssets().open("wilayah.bin.gz");
+        try (InputStream raw = c.getAssets().open("wilayah.lxw");
              DataInputStream in = new DataInputStream(new BufferedInputStream(new GZIPInputStream(raw), 65536))) {
             byte[] sig = new byte[4]; in.readFully(sig);
             if (sig[0] != 'L' || sig[3] != '1') return null;
