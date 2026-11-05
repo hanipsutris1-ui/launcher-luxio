@@ -12,7 +12,7 @@
 //   VarioBridge.getMemInfo() -> {"appMB":n}  RAM yang dipakai launcher
 //   VarioBridge.clearCache()                 hapus cache WebView launcher sendiri lalu muat ulang
 //   VarioBridge.isDefaultHome() -> bool / setHome()   cek & buka pengaturan Home bawaan
-//   VarioBridge.getVersion() -> "1.x.y"
+//   VarioBridge.getVersion() -> "1.x.y"   getVersionCode() -> n   bukaUri(url)
 //   VarioBridge.klik()                       bunyi klik sistem (View.playSoundEffect, ikut setelan Suara sentuhan)
 //   VarioBridge.beep()                       nada peringatan kecepatan (opsional; kalau tidak ada dipakai WebAudio)
 //   event {type:'home', isDefault}           dikirim saat launcher tampil lagi
@@ -495,6 +495,23 @@ $('simNav').onclick=()=>{closePop();window.vario.onEvent({type:'nav',active:true
 app.addEventListener('click',e=>{if(e.target.closest('button'))call('klik');},true);
 // 3D berhenti total saat launcher tidak terlihat (kamera mundur, aplikasi lain, layar mati)
 document.addEventListener('visibilitychange',()=>{if(document.hidden)renderer.setAnimationLoop(null);else{renderer.setAnimationLoop(loop);need();}});
+// ---------- cek pembaruan dari GitHub Releases ----------
+const REPO='hanipsutris1-ui/launcher-luxio';let updInfo=null;
+async function cekUpdate(manual){const vc=+(call('getVersionCode')||0);
+  if(manual)$('updT').textContent='Memeriksa…';
+  try{const r=await fetch(`https://api.github.com/repos/${REPO}/releases/latest`,{cache:'no-store'});if(!r.ok)throw 0;const j=await r.json();
+    const n=parseInt(String(j.tag_name||'').replace(/\D/g,''))||0;const apk=(j.assets||[]).find(a=>/\.apk$/i.test(a.name));
+    updInfo={n,tag:j.tag_name,url:apk?apk.browser_download_url:j.html_url,notes:(j.body||'').trim()};
+    const baru=vc&&n>vc;
+    $('updT').textContent=!vc?`Terbaru di GitHub: ${j.tag_name}`:(baru?`Versi baru ${j.tag_name} tersedia`:'Sudah versi terbaru');
+    $('updNotes').hidden=!updInfo.notes;$('updNotes').textContent=updInfo.notes?`Catatan rilis ${j.tag_name}:\n${updInfo.notes}`:'';
+    if(baru&&cfg.skipUpd!==n){$('updBT').textContent=`Versi baru ${j.tag_name} tersedia`;$('updBanner').hidden=false;}
+  }catch(e){if(manual)$('updT').textContent='Gagal memeriksa (butuh internet)';}}
+$('tUpd').onclick=()=>cekUpdate(true);
+$('bUpd').onclick=()=>{$('updBanner').hidden=true;renderTema();openPop('popTema');document.querySelector('[data-tab="sistem"]').click();
+  if(updInfo&&updInfo.url)setTimeout(()=>confirmBox(`Unduh ${updInfo.tag}?`,'APK baru dibuka di browser. Setelah terunduh, pasang menimpa versi ini. Pengaturan tetap aman.',()=>{if(bridge)call('bukaUri',updInfo.url);else toast('Simulasi: membuka '+updInfo.url);}),300);};
+$('bUpdX').onclick=()=>{$('updBanner').hidden=true;if(updInfo){cfg.skipUpd=updInfo.n;save();}};
+setTimeout(()=>{if(bridge)cekUpdate(false);},20000);
 // dipanggil Android: tombol Back dan layar menyala lagi
 window.kembali=()=>{if(document.querySelector('.pop.on')){closePop();return;}if(app.classList.contains('foto')){app.classList.remove('foto');need();return;}if(st.ytOpen){call('hideWebPanel');return;}if($('panel').classList.contains('on')){$('panelX').click();}};
 window.tampilDoa=()=>showDoa();

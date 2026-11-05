@@ -637,6 +637,10 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String getVersion() {
             try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception e) { return ""; }
         }
+        @JavascriptInterface public int getVersionCode() {
+            try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionCode; } catch (Exception e) { return 0; }
+        }
+        @JavascriptInterface public void bukaUri(String u) { MainActivity.this.bukaUri(u); }
         @JavascriptInterface public void klik() { h.post(() -> web.playSoundEffect(SoundEffectConstants.CLICK)); }
     }
 
