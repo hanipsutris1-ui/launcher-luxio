@@ -256,9 +256,11 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
       <div class="notes" id="updNotes" hidden></div>
       <h3>Nama sapaan</h3><div class="row inrow"><label>Nama<input id="nama" maxlength="20" autocomplete="off"></label><button class="chip" id="namaSave">Simpan</button></div>
       <h3>Perawatan</h3><div class="row">
+        <button class="chip" id="tHemat" aria-pressed="false">Mode grafis hemat</button>
         <button class="chip" id="tPerf" aria-pressed="false">Info FPS &amp; RAM</button>
         <button class="chip" id="tCache">Bersihkan cache</button>
         <button class="chip warn" id="tReset">Reset semua pengaturan</button></div>
+      <h3>Cadangan pengaturan</h3><div class="row"><button class="chip" id="tEks">Simpan cadangan</button><button class="chip" id="tImp">Pulihkan dari file</button></div>
       <h3>Kredit</h3>
       <div class="about">Suara doa: Mishary Rashid Alafasy, via everyayah.com · Teks terjemahan: Kemenag RI<br>
         Cuaca: BMKG (Badan Meteorologi, Klimatologi, dan Geofisika) · Data wilayah: Kepmendagri via geografis (MIT)<br>
@@ -275,6 +277,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
   <div id="perf" class="ui" hidden></div>
   <button class="chip" id="fotoExit">Keluar mode foto</button>
   <input type="file" id="filePick" accept="image/*" hidden>
+  <input type="file" id="cfgPick" accept="application/json,.json" hidden>
   <div id="toast" role="status"></div>
 </div></div>
 <div id="simbar" hidden><span>Simulasi</span>

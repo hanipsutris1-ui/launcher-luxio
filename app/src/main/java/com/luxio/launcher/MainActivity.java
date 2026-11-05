@@ -95,7 +95,10 @@ public class MainActivity extends Activity {
     AudioManager am;
     AudioFocusRequest fokus;
 
-    static final int PILIH_GAMBAR = 7;
+    static final int PILIH_GAMBAR = 7, PILIH_CADANGAN = 8;
+    android.widget.ImageView instan;
+    long detakJs, siapAt;
+    java.io.File fileInstan() { return new java.io.File(getFilesDir(), "instan.jpg"); }
 
     @Override
     protected void onCreate(Bundle b) {
@@ -139,6 +142,9 @@ public class MainActivity extends Activity {
                     return new WebResourceResponse("text/plain", "utf-8", 404, "Not Found", null, null);
                 }
             }
+            @Override public boolean onRenderProcessGone(WebView v, android.webkit.RenderProcessGoneDetail d) {
+                h.post(MainActivity.this::pulihkanWeb); return true;
+            }
             @Override public void onPageFinished(WebView v, String url) {
                 siap = true;
                 kirimGps(); kirimMedia(true); kirimHome();
@@ -154,6 +160,17 @@ public class MainActivity extends Activity {
         });
         root.addView(web, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
         setContentView(root);
+        java.io.File fi = fileInstan();
+        if (fi.exists()) {
+            Bitmap g = BitmapFactory.decodeFile(fi.getAbsolutePath());
+            if (g != null) {
+                instan = new android.widget.ImageView(this);
+                instan.setScaleType(android.widget.ImageView.ScaleType.FIT_XY);
+                instan.setImageBitmap(g);
+                root.addView(instan, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                h.postDelayed(this::lepasInstan, 25000);   // jaga-jaga bila halaman tidak memberi tanda siap
+            }
+        }
         web.loadUrl(ROOT + "index.html");
 
         IntentFilter f = new IntentFilter(Intent.ACTION_SCREEN_OFF);
@@ -176,6 +193,35 @@ public class MainActivity extends Activity {
         else requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
         mulaiMedia();
         h.post(detak);
+    }
+
+    void lepasInstan() {
+        if (instan == null) return;
+        final View v = instan; instan = null;
+        v.animate().alpha(0f).setDuration(400).withEndAction(() -> root.removeView(v)).start();
+    }
+
+    /** simpan tampilan Home terakhir untuk ditampilkan instan saat HU menyala berikutnya */
+    void simpanInstan() {
+        if (!siap || instan != null || root.getWidth() == 0) return;
+        try {   // PixelCopy menangkap layar sungguhan termasuk kanvas WebGL
+            final Bitmap bm = Bitmap.createBitmap(root.getWidth(), root.getHeight(), Bitmap.Config.ARGB_8888);
+            android.view.PixelCopy.request(getWindow(), bm, hasil -> {
+                if (hasil != android.view.PixelCopy.SUCCESS) return;
+                new Thread(() -> {
+                    try (java.io.FileOutputStream o = new java.io.FileOutputStream(fileInstan())) {
+                        Bitmap.createScaledBitmap(bm, bm.getWidth() / 2, bm.getHeight() / 2, true).compress(Bitmap.CompressFormat.JPEG, 80, o);
+                    } catch (Exception e) { }
+                }).start();
+            }, h);
+        } catch (Exception e) { }
+    }
+
+    /** WebView baru bila proses render mati (pemulihan otomatis) */
+    void pulihkanWeb() {
+        siap = false;
+        try { root.removeView(web); web.destroy(); } catch (Exception e) { }
+        recreate();
     }
 
     void daftar(BroadcastReceiver r, IntentFilter f) {
@@ -209,7 +255,7 @@ public class MainActivity extends Activity {
         }
     }
 
-    @Override protected void onPause() { super.onPause(); tampil = false; }
+    @Override protected void onPause() { simpanInstan(); super.onPause(); tampil = false; }
 
     @Override protected void onNewIntent(Intent i) {
         super.onNewIntent(i);
@@ -225,6 +271,14 @@ public class MainActivity extends Activity {
 
     @Override protected void onActivityResult(int kode, int hasil, Intent data) {
         super.onActivityResult(kode, hasil, data);
+        if (kode == PILIH_CADANGAN && hasil == RESULT_OK && data != null && data.getData() != null) {
+            try (InputStream in = getContentResolver().openInputStream(data.getData())) {
+                ByteArrayOutputStream bo = new ByteArrayOutputStream(); byte[] buf = new byte[8192]; int r;
+                while ((r = in.read(buf)) > 0) bo.write(buf, 0, r);
+                JSONObject o = new JSONObject(); o.put("type", "settings"); o.put("data", bo.toString("UTF-8")); event(o);
+            } catch (Exception e) { h.post(() -> Toast.makeText(this, "File cadangan tidak bisa dibaca", Toast.LENGTH_SHORT).show()); }
+            return;
+        }
         if (kode != PILIH_GAMBAR || hasil != RESULT_OK || data == null || data.getData() == null) return;
         final Uri u = data.getData();
         new Thread(() -> {
@@ -370,6 +424,8 @@ public class MainActivity extends Activity {
         @Override public void run() {
             kirimGps();
             if (ctl != null) kirimMedia(false);
+            long kini = SystemClock.elapsedRealtime();
+            if (tampil && siap && detakJs > 0 && kini - detakJs > 20000) { detakJs = 0; siap = false; web.reload(); }
             if (siap && lokasiGeo != null && System.currentTimeMillis() - cuacaAkhir > 45 * 60000L) { cuacaAkhir = System.currentTimeMillis() - 40 * 60000L; geocode(lat, lon); }
             h.postDelayed(this, 1000);
         }
@@ -636,6 +692,30 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void setHome() { bukaIntent(new Intent(Settings.ACTION_HOME_SETTINGS)); }
         @JavascriptInterface public String getVersion() {
             try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionName; } catch (Exception e) { return ""; }
+        }
+        @JavascriptInterface public void ready() {
+            detakJs = SystemClock.elapsedRealtime(); siapAt = detakJs;
+            h.post(MainActivity.this::lepasInstan);
+            h.postDelayed(MainActivity.this::simpanInstan, 9000);   // setelah doa selesai, tampilan bersih
+        }
+        @JavascriptInterface public void alive() { detakJs = SystemClock.elapsedRealtime(); }
+        @JavascriptInterface public String exportSettings(String json) {
+            try {
+                String nama = "luxio-vario-pengaturan-" + new java.text.SimpleDateFormat("yyyyMMdd-HHmm", Locale.ROOT).format(new java.util.Date()) + ".json";
+                android.content.ContentValues v = new android.content.ContentValues();
+                v.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, nama);
+                v.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, "application/json");
+                v.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS + "/LuxioVario");
+                Uri u = getContentResolver().insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, v);
+                if (u == null) return null;
+                try (java.io.OutputStream o = getContentResolver().openOutputStream(u)) { o.write(json.getBytes(java.nio.charset.StandardCharsets.UTF_8)); }
+                return "Download/LuxioVario/" + nama;
+            } catch (Exception e) { return null; }
+        }
+        @JavascriptInterface public void importSettings() {
+            Intent i = new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE).setType("*/*")
+                    .putExtra(Intent.EXTRA_MIME_TYPES, new String[]{"application/json", "text/plain", "application/octet-stream"});
+            h.post(() -> { try { startActivityForResult(i, PILIH_CADANGAN); } catch (Exception e) { } });
         }
         @JavascriptInterface public int getVersionCode() {
             try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionCode; } catch (Exception e) { return 0; }

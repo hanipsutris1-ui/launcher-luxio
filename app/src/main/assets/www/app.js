@@ -13,6 +13,8 @@
 //   VarioBridge.clearCache()                 hapus cache WebView launcher sendiri lalu muat ulang
 //   VarioBridge.isDefaultHome() -> bool / setHome()   cek & buka pengaturan Home bawaan
 //   VarioBridge.getVersion() -> "1.x.y"   getVersionCode() -> n   bukaUri(url)
+//   VarioBridge.ready()                      mobil siap tampil (lepas gambar instan)   alive() detak jantung
+//   VarioBridge.exportSettings(json)->nama / importSettings() -> event {type:'settings', data}
 //   VarioBridge.klik()                       bunyi klik sistem (View.playSoundEffect, ikut setelan Suara sentuhan)
 //   VarioBridge.beep()                       nada peringatan kecepatan (opsional; kalau tidak ada dipakai WebAudio)
 //   event {type:'home', isDefault}           dikirim saat launcher tampil lagi
@@ -36,7 +38,7 @@ const SIM=!bridge;
 const call=(fn,...a)=>{try{if(bridge&&typeof bridge[fn]==='function')return bridge[fn](...a);}catch(e){console.warn(fn,e);}return undefined;};
 
 // ---------- pengaturan (tersimpan otomatis) ----------
-const DEF={beep:true,nama:'Mas',plate:'kosong',plNo:'',plExp:'',perf:false,lastLat:null,lastLon:null,lastKota:null,accent:'biru',fmt:'24',wall:'showroom',wallData:null,wallMotion:true,doaSuara:true,turntable:false,lights:null,trip:0,
+const DEF={hemat:false,beep:true,nama:'Mas',plate:'kosong',plNo:'',plExp:'',perf:false,lastLat:null,lastLon:null,lastKota:null,accent:'biru',fmt:'24',wall:'showroom',wallData:null,wallMotion:true,doaSuara:true,turntable:false,lights:null,trip:0,
   dock:['nav','yt','tema','lampu','apps'],custom:{},recent:[]};
 let cfg={...DEF};
 try{const s=call('loadSettings')||localStorage.getItem('vario.cfg');if(s)cfg={...DEF,...JSON.parse(s)};}catch(e){}
@@ -105,7 +107,7 @@ setInterval(tickUI,1000);
 setInterval(()=>{const lock=(SIM&&st.simGps)||(st.gps&&performance.now()-(st.gpsAt||0)<5000);$('loc').classList.toggle('nogps',!lock);},1000);
 
 // ---------- halo & redup ----------
-function updHalo(){const a=ACC[cfg.accent]||ACC.biru;
+function updHalo(){const a=ACC[cfg.accent]||ACC.biru;if(cfg.hemat){$('halo').style.background='none';return;}
   $('halo').style.background=magrib
     ?'radial-gradient(46% 50% at 31% 52%,rgba(190,90,200,.30),rgba(255,140,80,.10) 55%,rgba(0,0,0,0) 75%)'
     :`radial-gradient(42% 46% at 31% 52%,rgba(${a[1]},.26),rgba(${a[1]},0) 70%)`;}
@@ -136,7 +138,7 @@ function fxInit(n){fxName=n;fxT=0;
   fxKick();}
 function fxKick(){fxDraw(0);if(!fxRun){fxRun=true;requestAnimationFrame(fxLoop);}}
 function fxLoop(t){if(!fxName||!FX[cfg.wall]){fxRun=false;return;}
-  if(!cfg.wallMotion||document.hidden){fxRun=false;return;}
+  if(!cfg.wallMotion||cfg.hemat||document.hidden){fxRun=false;return;}
   if(t-fxLast<50){requestAnimationFrame(fxLoop);return;}const dt=Math.min(0.1,(t-fxLast)/1000||0.05);fxLast=t;
   if(st.speed>1)parkedSince=t;const slow=(t-parkedSince>120000)?0.25:1;   // parkir > 2 menit: melambat
   fxDraw(dt*slow);requestAnimationFrame(fxLoop);}
@@ -179,6 +181,7 @@ window.vario={onEvent(e){
   else if(e.type==='panel'){st.ytOpen=!!e.open;$('slot').classList.toggle('yt',st.ytOpen);}
   else if(e.type==='split'){st.splitOk=!!e.ok;}
   else if(e.type==='nav'){if(e.active&&!st.nav)openWaze(true);st.nav=!!e.active;}
+  else if(e.type==='settings'){imporCfg(e.data||'');}
   else if(e.type==='wallpaper'){if(e.data)setGaleri(e.data);}
   tickUI();}};
 function turnFrom(b){if(st.lastBear!=null){let d=((b-st.lastBear+540)%360)-180;st.turn=THREE.MathUtils.clamp(d/12,-1,1);}st.lastBear=b;}
@@ -350,7 +353,8 @@ async function loadCar(){let buf=null;
   refl=car.clone(true);refl.scale.y=-1;
   refl.traverse(o=>{if(o.isMesh){const m=o.material.clone();fadeRefl(m);o.material=m;if(m.name.startsWith('lampu'))lampMats.push(m);if(m.name==='pelat')plateMats.push(m);}});
   applyPlate();
-  scene.add(car,refl);$('loading').remove();showDoa();applyLights();await renderer.compileAsync(scene,camera);need();}
+  scene.add(car,refl);$('loading').remove();applyHemat();showDoa();applyLights();await renderer.compileAsync(scene,camera);need();
+  requestAnimationFrame(()=>requestAnimationFrame(()=>call('ready')));}   // Android: lepas gambar instan
 loadCar().catch(e=>{$('loading').textContent='Model gagal dimuat';console.error(e);});
 
 // lampu
@@ -366,20 +370,20 @@ sgr.addColorStop(0,'rgba(220,225,232,.8)');sgr.addColorStop(1,'rgba(220,225,232,
 const puffs=[];for(let i=0;i<24;i++){const s=new THREE.Sprite(new THREE.SpriteMaterial({map:smokeTex,transparent:true,opacity:0,depthWrite:false}));s.visible=false;scene.add(s);puffs.push({s,life:0,v:new THREE.Vector3()});}
 let puffT=0;const EXH=new THREE.Vector3(0.42,0.26,-2.08);
 function updSmoke(dt){let alive=false;puffT-=dt;
-  if(st.speed<10&&puffT<=0&&car){puffT=0.22;const p=puffs.find(q=>q.life<=0);if(p){p.life=1;p.s.visible=true;p.s.position.copy(EXH).applyMatrix4(car.matrixWorld);p.v.set((Math.random()-.5)*.08,.12+Math.random()*.08,-.35-Math.random()*.2);}}
+  if(st.speed<10&&puffT<=0&&car&&!cfg.hemat){puffT=0.22;const p=puffs.find(q=>q.life<=0);if(p){p.life=1;p.s.visible=true;p.s.position.copy(EXH).applyMatrix4(car.matrixWorld);p.v.set((Math.random()-.5)*.08,.12+Math.random()*.08,-.35-Math.random()*.2);}}
   for(const p of puffs){if(p.life<=0)continue;alive=true;p.life-=dt/2.2;p.s.position.addScaledVector(p.v,dt);const k=1-p.life;p.s.scale.setScalar(.25+k*.9);p.s.material.opacity=Math.max(0,p.life)*.32;if(p.life<=0)p.s.visible=false;}
   return alive||st.speed<10;}
 // garis angin (> 80 km/jam)
 const windMat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:0,depthWrite:false});
 const streaks=[];for(let i=0;i<20;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(0.012,1.4),windMat);m.rotation.x=-Math.PI/2;const s=i%2?1:-1;
   m.position.set(s*(1.0+Math.random()*.4),0.4+Math.random()*1.4,Math.random()*8-4);m.userData.v=10+Math.random()*8;scene.add(m);streaks.push(m);}
-function updWind(dt){const a=THREE.MathUtils.clamp((st.speed-80)/40,0,1);windMat.opacity=a*0.3;if(a<=0)return false;
+function updWind(dt){const a=cfg.hemat?0:THREE.MathUtils.clamp((st.speed-80)/40,0,1);windMat.opacity=a*0.3;if(a<=0)return false;
   for(const m of streaks){m.position.z-=m.userData.v*dt*(st.speed/90);if(m.position.z<-4.5)m.position.z+=9;}return true;}
 // rintik hujan di lantai
 const rc_=document.createElement('canvas');rc_.width=rc_.height=64;const rg=rc_.getContext('2d');rg.strokeStyle='rgba(200,225,255,.9)';rg.lineWidth=3;rg.beginPath();rg.arc(32,32,26,0,7);rg.stroke();
 const ringTex=new THREE.CanvasTexture(rc_);const rings=[];
 for(let i=0;i<26;i++){const m=new THREE.Mesh(new THREE.PlaneGeometry(1,1),new THREE.MeshBasicMaterial({map:ringTex,transparent:true,opacity:0,depthWrite:false}));m.rotation.x=-Math.PI/2;m.position.y=0.005;m.userData.t=Math.random();scene.add(m);rings.push(m);}
-function updRain(dt){const on=st.rain;let any=false;
+function updRain(dt){const on=st.rain&&!cfg.hemat;let any=false;
   for(const r of rings){if(!on&&r.material.opacity<=0)continue;any=true;r.userData.t+=dt/1.1;
     if(r.userData.t>=1){r.userData.t=0;if(!on){r.material.opacity=0;continue;}const a=Math.random()*6.28,d=1.6+Math.random()*4;r.position.x=Math.cos(a)*d;r.position.z=Math.sin(a)*d*1.3;}
     const t=r.userData.t;r.scale.setScalar(0.05+t*0.45);r.material.opacity=on?(1-t)*0.5:0;}
@@ -418,6 +422,8 @@ function applyPlate(){if(!plateMats.length)return;if(!plateBase)plateBase=plateM
   const mt=new THREE.CanvasTexture(c);mt.flipY=false;mt.colorSpace=THREE.SRGBColorSpace;mt.anisotropy=4;const nt=new THREE.CanvasTexture(h);nt.flipY=false;
   for(const m of plateMats){m.map=mt;m.normalMap=nt;m.normalScale=new THREE.Vector2(1,1);m.roughness=0.4;m.metalness=0.3;m.userData.plMap=mt;m.userData.plNrm=nt;m.needsUpdate=true;}need();}
 
+// ---------- mode grafis hemat: tanpa pantulan, wallpaper diam, tanpa asap/angin/hujan/halo ----------
+function applyHemat(){if(refl)refl.visible=!cfg.hemat;updHalo();if(typeof fxKick==='function'&&fxName)fxKick();need();}
 // ---------- info FPS & RAM ----------
 let frames=0;setInterval(()=>{if(cfg.perf&&!doaOn){let ram='—';const mi=call('getMemInfo');
     if(mi){try{const j=JSON.parse(mi);ram=Math.round(j.appMB)+' MB';}catch(e){}}else if(performance.memory)ram=Math.round(performance.memory.usedJSHeapSize/1048576)+' MB (JS)';
@@ -453,7 +459,7 @@ function renderTema(){
     b.onclick=()=>{cfg.plate=id;save();applyPlate();renderTema();};pl.appendChild(b);}
   $('plateEdit').hidden=cfg.plate!=='isi';if(document.activeElement!==$('plNo'))$('plNo').value=cfg.plNo;if(document.activeElement!==$('plExp'))$('plExp').value=cfg.plExp;if(document.activeElement!==$('nama'))$('nama').value=cfg.nama;
   $('tBeep').setAttribute('aria-pressed',String(cfg.beep));
-  $('tPerf').setAttribute('aria-pressed',String(cfg.perf));
+  $('tPerf').setAttribute('aria-pressed',String(cfg.perf));$('tHemat').setAttribute('aria-pressed',String(cfg.hemat));
   const v=$('views');v.innerHTML='';for(const n of Object.keys(VIEWS)){const b=document.createElement('button');b.className='chip';b.textContent=n;b.onclick=()=>{goView(n);closePop();};v.appendChild(b);}
   $('tLampu').setAttribute('aria-pressed',String(lightsOn()));$('tGerak').setAttribute('aria-pressed',String(cfg.wallMotion));$('tPutar').setAttribute('aria-pressed',String(cfg.turntable));
   const w=$('walls');w.innerHTML='';
@@ -470,6 +476,7 @@ for(const id of['plNo','plExp']){$(id).addEventListener('input',()=>{clearTimeou
   $(id).addEventListener('keydown',e=>{if(e.key==='Enter'){clearTimeout(plT);plateFromInput();e.target.blur();toast('Pelat disimpan');}});}
 $('tBeep').onclick=()=>{cfg.beep=!cfg.beep;save();renderTema();};
 $('namaSave').onclick=()=>{cfg.nama=$('nama').value.trim()||'Mas';save();toast(`Nama sapaan: ${cfg.nama}`);};
+$('tHemat').onclick=()=>{cfg.hemat=!cfg.hemat;save();applyHemat();renderTema();toast(cfg.hemat?'Mode grafis hemat aktif':'Mode grafis hemat mati');};
 $('tPerf').onclick=()=>{cfg.perf=!cfg.perf;save();updPerf();renderTema();};
 $('tCache').onclick=()=>confirmBox('Bersihkan cache?','File sementara launcher dihapus lalu launcher dimuat ulang. Pengaturan tidak ikut terhapus.',async()=>{
   if(bridge&&bridge.clearCache){call('clearCache');return;}try{if(window.caches)for(const k of await caches.keys())await caches.delete(k);}catch(e){}location.reload();});
@@ -512,6 +519,19 @@ $('bUpd').onclick=()=>{$('updBanner').hidden=true;renderTema();openPop('popTema'
   if(updInfo&&updInfo.url)setTimeout(()=>confirmBox(`Unduh ${updInfo.tag}?`,'APK baru dibuka di browser. Setelah terunduh, pasang menimpa versi ini. Pengaturan tetap aman.',()=>{if(bridge)call('bukaUri',updInfo.url);else toast('Simulasi: membuka '+updInfo.url);}),300);};
 $('bUpdX').onclick=()=>{$('updBanner').hidden=true;if(updInfo){cfg.skipUpd=updInfo.n;save();}};
 setTimeout(()=>{if(bridge)cekUpdate(false);},20000);
+// ---------- pemulihan otomatis ----------
+setInterval(()=>call('alive'),4000);            // Android memuat ulang bila detak berhenti > 20 detik
+canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();setTimeout(()=>location.reload(),1500);});
+// ---------- cadangan pengaturan ----------
+function eksporCfg(){const s=JSON.stringify({app:'luxio-vario',ver:1,saved:new Date().toISOString(),cfg},null,1);
+  if(bridge&&bridge.exportSettings){const r=call('exportSettings',s);toast(r?`Tersimpan: ${r}`:'Gagal menyimpan cadangan');return;}
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([s],{type:'application/json'}));a.download='luxio-vario-pengaturan.json';a.click();toast('Cadangan diunduh');}
+function imporCfg(txt){try{const j=JSON.parse(txt);const c=j.cfg||j;if(typeof c!=='object')throw 0;
+    confirmBox('Pulihkan pengaturan?','Pengaturan sekarang diganti dengan isi file cadangan.',()=>{cfg={...DEF,...c};const s=JSON.stringify(cfg);call('saveSettings',s);try{localStorage.setItem('vario.cfg',s);}catch(e){}location.reload();});}
+  catch(e){toast('File cadangan tidak valid');}}
+$('tEks').onclick=eksporCfg;
+$('tImp').onclick=()=>{if(bridge&&bridge.importSettings)call('importSettings');else $('cfgPick').click();};
+$('cfgPick').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>imporCfg(r.result);r.readAsText(f);e.target.value='';});
 // dipanggil Android: tombol Back dan layar menyala lagi
 window.kembali=()=>{if(document.querySelector('.pop.on')){closePop();return;}if(app.classList.contains('foto')){app.classList.remove('foto');need();return;}if(st.ytOpen){call('hideWebPanel');return;}if($('panel').classList.contains('on')){$('panelX').click();}};
 window.tampilDoa=()=>showDoa();
