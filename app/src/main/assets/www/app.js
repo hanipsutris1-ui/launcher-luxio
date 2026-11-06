@@ -36,7 +36,7 @@ const call=(fn,...a)=>{try{if(bridge&&typeof bridge[fn]==='function')return brid
 
 // ---------- pengaturan (tersimpan otomatis) ----------
 const DEF={hemat:false,beep:true,nama:'Mas',plate:'kosong',plNo:'',plExp:'',perf:false,lastLat:null,lastLon:null,lastKota:null,accent:'biru',fmt:'24',wall:'showroom',wallData:null,wallMotion:true,doaSuara:true,turntable:false,lights:null,trip:0,updLast:null,
-  dock:['nav','yt','tema','lampu','apps'],custom:{},recent:[],hidden:[]};
+  dock:['nav','yt','tema','lampu','apps'],custom:{},recent:[],hidden:[],widget:{jam:true,adz:true,cu:true,loc:true}};
 let cfg={...DEF};
 try{const s=call('loadSettings')||localStorage.getItem('vario.cfg');if(s)cfg={...DEF,...JSON.parse(s)};}catch(e){}
 let saveT=0,saveWarned=false;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{const s=JSON.stringify(cfg);call('saveSettings',s);if(bridge&&bridge.saveSettings)return;
@@ -78,7 +78,6 @@ const hm=h=>{h=fixh(h);const m=Math.round(h*60)%1440;return fmtClock(Math.floor(
 // ---------- teks UI ----------
 const HARI=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'],BLN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
-const ARAH=['Utara','Timur Laut','Timur','Tenggara','Selatan','Barat Daya','Barat','Barat Laut'];
 function tickUI(){
   const now=new Date();
   $('jam').innerHTML=fmtClock(now.getHours(),now.getMinutes());
@@ -94,8 +93,6 @@ function tickUI(){
   const p=st.place;
   if(p){$('kec').textContent=p.kecamatan?`Kec. ${p.kecamatan}`:(p.kota||p.kabupaten||'Lokasi');
     $('kab').textContent=[p.kabupaten?`Kab. ${p.kabupaten}`:(p.kota?`Kota ${p.kota}`:''),p.provinsi].filter(Boolean).join(' · ');}
-  const ar=$('arah'),lockA=st.bearing!=null&&((SIM&&st.simGps)||(st.gps&&performance.now()-(st.gpsAt||0)<5000));ar.hidden=!lockA;
-  if(lockA){const b=((st.bearing%360)+360)%360;$('arahT').textContent=ARAH[Math.round(b/45)%8];$('arahIc').style.transform=`rotate(${Math.round(b)}deg)`;}
   const hasWx=st.temp!=null;$('cu').classList.toggle('off',!hasWx);if(hasWx){$('wx').textContent=`${Math.round(st.temp)}°C · ${st.wx||''}`;$('wxSrc').textContent=st.wxSrc||'';}
 }
 setInterval(tickUI,1000);
@@ -165,7 +162,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)fxKick();}
 
 // ---------- event dari Android ----------
 window.vario={onEvent(e){
-  if(e.type==='gps'){st.gps=true;st.gpsAt=performance.now();if(e.trip!=null){cfg.trip=e.trip;hudDirty=true;}st.lat=e.lat;st.lon=e.lon;if(Math.abs((cfg.lastLat||0)-e.lat)+Math.abs((cfg.lastLon||0)-e.lon)>0.01){cfg.lastLat=e.lat;cfg.lastLon=e.lon;save();}setSpeed((e.speed||0)*3.6);if(e.bearing!=null&&st.speed>3){turnFrom(e.bearing);st.bearing=e.bearing;}}
+  if(e.type==='gps'){st.gps=true;st.gpsAt=performance.now();if(e.trip!=null){cfg.trip=e.trip;hudDirty=true;}st.lat=e.lat;st.lon=e.lon;if(Math.abs((cfg.lastLat||0)-e.lat)+Math.abs((cfg.lastLon||0)-e.lon)>0.01){cfg.lastLat=e.lat;cfg.lastLon=e.lon;save();}setSpeed((e.speed||0)*3.6);if(e.bearing!=null&&st.speed>3)turnFrom(e.bearing);}
   else if(e.type==='place'){st.place=e;cfg.lastKota=e;save();}
   else if(e.type==='lampu'){st.lampuKota=!!e.on;cfg.lampuKota=st.lampuKota;cfg.lights=null;save();updDim();applyLights&&applyLights();need();}
   else if(e.type==='home'){$('homeBanner').hidden=!!e.isDefault;}
@@ -454,6 +451,10 @@ renderer.setAnimationLoop(loop);
 document.querySelectorAll('.tabs [data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs [data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
   document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==b.dataset.tab);});
 const sw=(id,on)=>$(id).setAttribute('aria-checked',String(!!on));
+const WG={jam:['wJam','noJam'],adz:['wAdz','noAdz'],cu:['wCu','noCu'],loc:['wLoc','noLoc']};
+function applyWidget(){cfg.widget={jam:true,adz:true,cu:true,loc:true,...cfg.widget};for(const [k,[,c]] of Object.entries(WG))app.classList.toggle(c,!cfg.widget[k]);}
+for(const [k,[id]] of Object.entries(WG))$(id).onclick=()=>{cfg.widget={...cfg.widget,[k]:!cfg.widget[k]};save();applyWidget();renderTema();};
+applyWidget();
 const PLAT_DEF=['AD 1481 YH','06.07'];
 function platOn(){return cfg.plate!=='kosong';}
 // thumbnail wallpaper: digambar dari wallpaper aslinya (ikut warna aksen), disimpan per aksen
@@ -470,7 +471,7 @@ function renderTema(){
   sw('tPlat',platOn());$('plateEdit').hidden=!platOn();
   if(document.activeElement!==$('plNo'))$('plNo').value=cfg.plNo||PLAT_DEF[0];if(document.activeElement!==$('plExp'))$('plExp').value=cfg.plExp||PLAT_DEF[1];
   if(document.activeElement!==$('nama'))$('nama').value=cfg.nama;$('namaPrev').textContent=`Sapaan: Assalamu'alaikum, ${cfg.nama||'Mas'}`;
-  sw('tBeep',cfg.beep);sw('tDoa',cfg.doaSuara);sw('tPerf',cfg.perf);sw('tHemat',cfg.hemat);sw('tGerak',cfg.wallMotion);sw('tPutar',cfg.turntable);sw('tFmt',cfg.fmt!=='12');
+  sw('tBeep',cfg.beep);sw('tDoa',cfg.doaSuara);sw('tPerf',cfg.perf);sw('tHemat',cfg.hemat);sw('tGerak',cfg.wallMotion);sw('tPutar',cfg.turntable);sw('tFmt',cfg.fmt!=='12');for(const [k,[id]] of Object.entries(WG))sw(id,cfg.widget[k]!==false);
   const v=$('views');v.innerHTML='';for(const n of Object.keys(VIEWS)){const b=document.createElement('button');b.className='chip';b.textContent=n;b.onclick=()=>{goView(n);closePop();};v.appendChild(b);}
   const fb=document.createElement('button');fb.className='chip aksi';fb.innerHTML='<svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Mode foto';
   fb.onclick=()=>{closePop();app.classList.add('foto');$('dock').classList.remove('hide');toast('Mode foto: putar dan perbesar mobil');need();};v.appendChild(fb);

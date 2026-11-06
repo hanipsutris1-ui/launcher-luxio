@@ -30,16 +30,13 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 /* lokasi */
 #loc{position:absolute;left:40px;top:30px;display:flex;gap:12px;align-items:flex-start;max-width:600px}
 .kecrow{display:flex;align-items:center;gap:14px}
-#arah{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px 0 8px;border-radius:15px;border:1px solid rgba(var(--acc-rgb),.4);background:rgba(var(--acc-rgb),.08);font-size:15px;font-weight:700;color:var(--glow);white-space:nowrap}
-#arah[hidden]{display:none}
-#arah svg{width:18px;height:18px;stroke:var(--acc);fill:rgba(var(--acc-rgb),.25);stroke-width:1.8;stroke-linejoin:round;transition:transform .8s ease}
 #loc svg{width:26px;height:26px;margin-top:3px;flex:none}
 #kec{font-size:26px;font-weight:700;line-height:1.15}
 #kab{font-size:16px;color:var(--dim);margin-top:4px}
 /* doa */
 /* jam & adzan */
 #status{position:absolute;right:40px;top:30px;display:flex;gap:28px;align-items:flex-start}
-#status .kiri{padding-top:10px}
+#status .kiri{padding-top:6px}
 .adz{display:flex;align-items:center;gap:14px}
 .ring{position:relative;width:62px;height:62px;flex:none}
 .ring svg{width:62px;height:62px;transform:rotate(-90deg)}
@@ -52,9 +49,10 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 #pName{font-size:15px;color:var(--dim);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
 #pTime{font-size:32px;line-height:1}
 .cu svg{width:21px;height:21px}
-.cu{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:17px}
+.cu{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:6px;font-size:17px;color:var(--dim)}
 .cu.off{display:none}
 #status .kanan{text-align:right}
+#app.noJam #status .kanan,#app.noAdz #status .kiri,#app.noLoc #loc,#app.noCu #cu{display:none}
 #jam{font-size:68px;line-height:.95;letter-spacing:-1px}
 #jam small{font-size:22px;font-weight:700;margin-left:4px}
 #tgl{font-size:17px;color:var(--dim);margin-top:8px}
@@ -125,6 +123,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 .holding{transform:scale(1.12)!important;transition:transform .45s ease;filter:drop-shadow(0 0 10px rgba(var(--acc-rgb),.9))}
 #loc.nogps svg{stroke:#8a94a0;animation:pulse 1.6s ease-in-out infinite}
 .wxsrc{font-size:12px;color:var(--dim);margin-left:6px;letter-spacing:.06em}
+.wxsrc:empty{display:none}
 #updBanner{position:absolute;left:50%;top:226px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid rgba(var(--acc-rgb),.6);border-radius:28px;padding:6px 8px 6px 22px;font-size:16px;z-index:15}
 #updBanner[hidden]{display:none}
 .notes{margin-top:10px;font-size:14.5px;line-height:1.6;color:var(--dim);white-space:pre-line;max-height:160px;overflow:auto;border-left:2px solid var(--acc);padding-left:12px}
@@ -203,7 +202,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
   <div id="loading">Memuat mobil…</div>
 
   <div id="loc" class="ui"><svg class="ic" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0119 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
-    <div><div class="kecrow"><div id="kec">Mencari lokasi…</div><span id="arah" hidden aria-label="Arah"><svg viewBox="0 0 24 24" id="arahIc"><path d="M12 3l6 17-6-4-6 4z"/></svg><span id="arahT"></span></span></div><div id="kab"></div></div></div>
+    <div><div class="kecrow"><div id="kec">Mencari lokasi…</div></div><div id="kab"></div></div></div>
 
   <div id="doa" class="ui off" aria-live="polite"><div class="salam" id="salam">Assalamu'alaikum, Mas</div><div class="sub" id="doaSub">Semoga selamat sampai tujuan</div><div class="jd"><i></i>Doa naik kendaraan<i></i></div>
     <div class="ar" dir="rtl" lang="ar"><span>سُبْحٰنَ الَّذِيْ سَخَّرَ لَنَا هٰذَا وَمَا كُنَّا لَهٗ مُقْرِنِيْنَۙ</span><span>وَاِنَّآ اِلٰى رَبِّنَا لَمُنْقَلِبُوْنَ</span></div>
@@ -213,9 +212,8 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 
   <div id="status" class="ui">
     <div class="kiri"><div class="adz" id="adz"><div class="ring" aria-hidden="true"><svg viewBox="0 0 48 48"><circle class="rb" cx="24" cy="24" r="21"/><circle class="rf" id="ringF" cx="24" cy="24" r="21"/></svg><span id="cd"></span></div>
-      <div class="adzT"><span id="pName">Isya</span><b class="glow" id="pTime">--:--</b></div></div>
-      <div class="cu off" id="cu"><svg class="ic" viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 00.6-7.95A6 6 0 006.1 9.1 4.5 4.5 0 007 18z"/></svg><span id="wx"></span><span id="wxSrc" class="wxsrc"></span></div></div>
-    <div class="kanan"><div id="jam" class="glow">--:--</div><div id="tgl"></div></div>
+      <div class="adzT"><span id="pName">Isya</span><b class="glow" id="pTime">--:--</b></div></div></div>
+    <div class="kanan"><div id="jam" class="glow">--:--</div><div id="tgl"></div><div class="cu off" id="cu"><svg class="ic" viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 00.6-7.95A6 6 0 006.1 9.1 4.5 4.5 0 007 18z"/></svg><span id="wx"></span><span id="wxSrc" class="wxsrc"></span></div></div>
   </div>
 
 
@@ -243,12 +241,19 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 
   <div class="pop" id="popTema" role="dialog" aria-modal="true" aria-label="Pengaturan"><div class="sheet tema">
     <header><h2>Pengaturan</h2><button class="x" data-close aria-label="Tutup">✕</button></header>
-    <div class="tabs" role="tablist"><button role="tab" data-tab="tampilan" aria-selected="true">Tampilan</button><button role="tab" data-tab="mobil" aria-selected="false">Mobil</button><button role="tab" data-tab="sapaan" aria-selected="false">Sapaan</button><button role="tab" data-tab="sistem" aria-selected="false">Sistem</button><button role="tab" data-tab="info" aria-selected="false">Info</button></div>
+    <div class="tabs" role="tablist"><button role="tab" data-tab="tampilan" aria-selected="true">Tampilan</button><button role="tab" data-tab="widget" aria-selected="false">Widget</button><button role="tab" data-tab="mobil" aria-selected="false">Mobil</button><button role="tab" data-tab="sapaan" aria-selected="false">Sapaan</button><button role="tab" data-tab="sistem" aria-selected="false">Sistem</button><button role="tab" data-tab="info" aria-selected="false">Info</button></div>
     <div class="panes">
     <section data-pane="tampilan">
       <h3>Wallpaper</h3><div class="wgrid" id="walls"></div>
       <h3>Warna aksen</h3><div class="row" id="accents"></div>
-      <div class="sws"><button class="swr" id="tGerak" role="switch"><span>Gerak wallpaper<small>Wallpaper hidup bergerak pelan</small></span><i></i></button>
+      <div class="sws"><button class="swr" id="tGerak" role="switch"><span>Gerak wallpaper<small>Wallpaper hidup bergerak pelan</small></span><i></i></button></div>
+    </section>
+    <section data-pane="widget" hidden>
+      <h3>Tampil di layar utama</h3>
+      <div class="sws" style="margin-top:0"><button class="swr" id="wJam" role="switch"><span>Jam &amp; tanggal<small>Kanan atas</small></span><i></i></button>
+        <button class="swr" id="wAdz" role="switch"><span>Waktu adzan<small>Cincin hitung mundur sholat berikutnya</small></span><i></i></button>
+        <button class="swr" id="wCu" role="switch"><span>Cuaca<small>Suhu &amp; keadaan dari BMKG</small></span><i></i></button>
+        <button class="swr" id="wLoc" role="switch"><span>Lokasi GPS<small>Kecamatan &amp; kabupaten, kiri atas</small></span><i></i></button>
         <button class="swr" id="tFmt" role="switch"><span>Format 24 jam<small>Mati = 12 jam (AM/PM)</small></span><i></i></button></div>
     </section>
     <section data-pane="mobil" hidden>
