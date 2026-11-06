@@ -97,9 +97,7 @@ setInterval(()=>{const lock=(SIM&&st.simGps)||(st.gps&&performance.now()-(st.gps
 
 // ---------- halo & redup ----------
 function updHalo(){const a=ACC[cfg.accent]||ACC.biru;if(cfg.hemat){$('halo').style.background='none';return;}
-  $('halo').style.background=magrib
-    ?'radial-gradient(46% 50% at 50% 52%,rgba(190,90,200,.30),rgba(255,140,80,.10) 55%,rgba(0,0,0,0) 75%)'
-    :`radial-gradient(42% 46% at 50% 52%,rgba(${a[1]},.26),rgba(${a[1]},0) 70%)`;}
+  $('halo').style.background=`radial-gradient(42% 46% at 50% 52%,rgba(${a[1]},.26),rgba(${a[1]},0) 70%)`;}
 function updDim(){$('dim').style.opacity=st.lampuKota?.22:0;}
 
 // ---------- wallpaper ----------
@@ -256,12 +254,17 @@ function openYT(){if(bridge||getApps().some(a=>a.pkg==='com.google.android.youtu
 // ---------- doa saat HU menyala ----------
 // doa: suara Mishary Rashid Alafasy (QS 43:13 bagian doa + 43:14), teks tampil selama suara berjalan
 let doaAudio=null,doaOn=false,carReady=false;
-async function showDoa(){const d=$('doa');$('salam').textContent=`Assalamu'alaikum, ${cfg.nama||'Mas'}`;d.classList.remove('off');doaOn=true;updPerf();const ld=$('loading');if(ld&&!carReady)ld.style.visibility='hidden';let ms=12000;
+function tutupDoa(){const d=$('doa');d.classList.add('off');doaOn=false;updPerf();const l2=$('loading');if(l2&&!carReady)l2.style.visibility='';}
+$('doa').addEventListener('click',tutupDoa);   // ketuk kartu = sembunyikan; suara tartil tetap jalan
+function doaBar(ms){const b=$('doaWkt');b.style.transition='none';b.style.transform='scaleX(1)';b.offsetWidth;b.style.transition=`transform ${ms}ms linear`;b.style.transform='scaleX(0)';}
+async function showDoa(){const d=$('doa');$('salam').textContent=`Assalamu'alaikum, ${cfg.nama||'Mas'}`;
+  const jam=new Date().getHours();$('doaSub').textContent=`Selamat ${jam<11?'pagi':jam<15?'siang':jam<18?'sore':'malam'} · semoga selamat sampai tujuan`;
+  d.classList.remove('off');doaBar(12000);doaOn=true;updPerf();const ld=$('loading');if(ld&&!carReady)ld.style.visibility='hidden';let ms=12000;
   {try{const src=(await import('./doa.js')).default;doaAudio=new Audio(src);doaAudio.volume=0.9;
       call('duckMusic',true);   // Android: kecilkan musik selama doa (audio focus)
-      await doaAudio.play();ms=Math.max(ms,(doaAudio.duration||19.5)*1000+800);
+      await doaAudio.play();ms=Math.max(ms,(doaAudio.duration||19.5)*1000+800);doaBar(ms);
       doaAudio.addEventListener('ended',()=>call('duckMusic',false),{once:true});}catch(e){call('duckMusic',false);}}
-  setTimeout(()=>{d.classList.add('off');doaOn=false;updPerf();const l2=$('loading');if(l2&&!carReady)l2.style.visibility='';},ms);}
+  setTimeout(()=>{if(doaOn)tutupDoa();},ms);}
 
 // ---------- 3D ----------
 const canvas=$('gl');
