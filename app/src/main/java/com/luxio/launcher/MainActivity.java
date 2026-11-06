@@ -71,8 +71,7 @@ public class MainActivity extends Activity {
 
     final Handler h = new Handler(Looper.getMainLooper());
     FrameLayout root;
-    WebView web, panel;
-    android.widget.TextView tutupPanel;
+    WebView web;
     boolean siap, tampil, doaTunggu;
     long layarMati, waktuTunggu;
 
@@ -88,16 +87,6 @@ public class MainActivity extends Activity {
     long cuacaAkhir;
     final Object kunciWil = new Object();
 
-    MediaSessionManager msm;
-    MediaController ctl;
-    boolean izinMusik;
-    String kunciSampul = "", sampulData = "";
-    // Lagu terakhir yang metadatanya lengkap: ditampilkan lagi sebagai keadaan tak aktif
-    // saat metadata sesi kosong sesaat atau sesinya mati, supaya panel tidak mendadak kosong.
-    String laguJudul = "", laguArtis = "", laguApp = "", laguPkg = "", laguSampul = "";
-    long laguDur, laguPos;
-    boolean laguAda;
-    android.widget.TextView muatPanel;
     AudioManager am;
     AudioFocusRequest fokus;
 
@@ -156,7 +145,7 @@ public class MainActivity extends Activity {
             }
             @Override public void onPageFinished(WebView v, String url) {
                 siap = true;
-                kirimGps(); kirimMedia(true); kirimHome();
+                kirimGps(); kirimHome();
                 if (pref.contains("lat") && lokasiGeo == null) geocode(pref.getFloat("lat", 0), pref.getFloat("lon", 0));
                 String cu = pref.getString("cuaca", null);
                 if (cu != null) js("window.vario&&vario.onEvent(" + cu + ")");
@@ -202,7 +191,6 @@ public class MainActivity extends Activity {
 
         if (checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) mulaiGps();
         else requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION}, 1);
-        mulaiMedia();
         h.post(detak);
     }
 
@@ -280,7 +268,6 @@ public class MainActivity extends Activity {
         super.onResume();
         tampil = true;
         layarPenuh();
-        if (!izinMusik) mulaiMedia();
         kirimHome();
         if (doaTunggu) {
             doaTunggu = false;
@@ -333,8 +320,6 @@ public class MainActivity extends Activity {
         h.removeCallbacksAndMessages(null);
         try { unregisterReceiver(layarRx); unregisterReceiver(paketRx); unregisterReceiver(lampuRx); unregisterReceiver(unduhRx); } catch (Exception e) { }
         if (lm != null) lm.removeUpdates(dengarGps);
-        if (ctl != null) ctl.unregisterCallback(ctlCb);
-        if (msm != null) msm.removeOnActiveSessionsChangedListener(sesiBerubah);
         web.destroy();
         super.onDestroy();
     }
@@ -475,142 +460,12 @@ public class MainActivity extends Activity {
     final Runnable detak = new Runnable() {
         @Override public void run() {
             kirimGps();
-            if (ctl != null) kirimMedia(false);
             long kini = SystemClock.elapsedRealtime();
             if (tampil && siap && detakJs > 0 && kini - detakJs > 20000) { detakJs = 0; siap = false; web.reload(); }
             if (siap && lokasiGeo != null && System.currentTimeMillis() - cuacaAkhir > 45 * 60000L) { cuacaAkhir = System.currentTimeMillis() - 40 * 60000L; geocode(lat, lon); }
             h.postDelayed(this, 1000);
         }
     };
-
-    /* ===== musik: MediaSession aplikasi aktif (perlu izin akses notifikasi) ===== */
-    final MediaSessionManager.OnActiveSessionsChangedListener sesiBerubah = this::pilihSesi;
-
-    void mulaiMedia() {
-        msm = (MediaSessionManager) getSystemService(MEDIA_SESSION_SERVICE);
-        ComponentName cn = new ComponentName(this, PendengarMusik.class);
-        try {
-            List<MediaController> l = msm.getActiveSessions(cn);
-            msm.addOnActiveSessionsChangedListener(sesiBerubah, cn);
-            izinMusik = true;
-            pilihSesi(l);
-        } catch (SecurityException e) {
-            izinMusik = false;
-            kirimMedia(true);
-        }
-    }
-
-    void pilihSesi(List<MediaController> l) {
-        MediaController pilih = null;
-        if (l != null) {
-            // Sesi yang sedang PLAYING selalu menang.
-            for (MediaController c : l) {
-                PlaybackState st = c.getPlaybackState();
-                if (st != null && st.getState() == PlaybackState.STATE_PLAYING) { pilih = c; break; }
-            }
-            // Lengket: selama sesi yang sedang tampil masih ada di daftar, pertahankan —
-            // jangan berpindah ke sesi lain hanya karena urutan daftar (metadatanya bisa kosong).
-            if (pilih == null && ctl != null)
-                for (MediaController c : l)
-                    if (c.getSessionToken().equals(ctl.getSessionToken())) { pilih = ctl; break; }
-            if (pilih == null && !l.isEmpty()) pilih = l.get(0);
-        }
-        if (ctl != null && (pilih == null || !ctl.getSessionToken().equals(pilih.getSessionToken()))) {
-            ctl.unregisterCallback(ctlCb); ctl = null;
-        }
-        if (pilih != null && ctl == null) { ctl = pilih; ctl.registerCallback(ctlCb, h); }
-        kirimMedia(true);
-    }
-
-    final MediaController.Callback ctlCb = new MediaController.Callback() {
-        @Override public void onPlaybackStateChanged(PlaybackState s) {
-            // Jeda/berhenti BUKAN alasan memilih ulang sesi: pemilihan ulang hanya saat
-            // daftar sesi berubah (sesiBerubah) atau ada sesi lain yang PLAYING.
-            // Memilih ulang di sini bisa melompat ke sesi bermetadata kosong dan
-            // mengosongkan panel padahal lagu yang dijeda masih hidup.
-            kirimMedia(false);
-        }
-        @Override public void onMetadataChanged(MediaMetadata m) { kirimMedia(true); }
-        @Override public void onSessionDestroyed() {
-            if (ctl != null) ctl.unregisterCallback(ctlCb);
-            ctl = null;
-            mulaiMedia();
-        }
-    };
-
-    static String teks(MediaMetadata m, String... kunci) {
-        for (String k : kunci) { CharSequence t = m.getText(k); if (t != null && t.length() > 0) return t.toString(); }
-        return "";
-    }
-
-    void kirimMedia(boolean sampul) {
-        try {
-            JSONObject o = new JSONObject();
-            o.put("type", "media");
-            o.put("izin", izinMusik);   // JS: tampilkan petunjuk izin bila false
-            MediaMetadata m = ctl == null ? null : ctl.getMetadata();
-            String judul = m == null ? "" : teks(m, MediaMetadata.METADATA_KEY_TITLE, MediaMetadata.METADATA_KEY_DISPLAY_TITLE);
-            if (m != null && judul.length() > 0) {
-                // Data hidup lengkap: kirim, dan simpan sebagai lagu terakhir.
-                PlaybackState st = ctl.getPlaybackState();
-                boolean main = st != null && st.getState() == PlaybackState.STATE_PLAYING;
-                long pos = st == null ? 0 : st.getPosition();
-                if (main && st.getLastPositionUpdateTime() > 0)
-                    pos += (long) ((SystemClock.elapsedRealtime() - st.getLastPositionUpdateTime()) * st.getPlaybackSpeed());
-                if (sampul) perbaruiSampul(m);
-                laguJudul = judul;
-                laguArtis = teks(m, MediaMetadata.METADATA_KEY_ARTIST, MediaMetadata.METADATA_KEY_ALBUM_ARTIST, MediaMetadata.METADATA_KEY_DISPLAY_SUBTITLE, MediaMetadata.METADATA_KEY_ALBUM);
-                laguDur = Math.max(0, m.getLong(MediaMetadata.METADATA_KEY_DURATION));
-                laguPos = Math.max(0, pos);
-                laguApp = labelApp(ctl.getPackageName());
-                laguPkg = ctl.getPackageName();
-                if (sampul) laguSampul = sampulData;
-                laguAda = true;
-                o.put("active", true);
-                o.put("title", laguJudul);
-                o.put("artist", laguArtis);
-                o.put("dur", laguDur);
-                o.put("pos", laguPos);
-                o.put("playing", main);
-                o.put("app", laguApp);
-                o.put("pkg", laguPkg);
-                if (sampul) o.put("art", sampulData);
-                event(o);
-                return;
-            }
-            if (laguAda) {
-                // Metadata kosong sesaat (sering datang terlambat) atau sesi baru saja mati:
-                // JANGAN kosongkan panel — tampilkan lagu terakhir sebagai tak aktif.
-                // JS menua-kannya sendiri (jeda > 5 menit kembali ke wajah sumber).
-                o.put("active", true);
-                o.put("title", laguJudul);
-                o.put("artist", laguArtis);
-                o.put("dur", laguDur);
-                o.put("pos", laguPos);
-                o.put("playing", false);
-                o.put("app", laguApp);
-                o.put("pkg", laguPkg);
-                if (sampul) o.put("art", laguSampul);
-                event(o);
-                return;
-            }
-            o.put("active", false);
-            event(o);
-        } catch (Exception e) { }
-    }
-
-    void perbaruiSampul(MediaMetadata m) {
-        Bitmap art = m.getBitmap(MediaMetadata.METADATA_KEY_ALBUM_ART);
-        if (art == null) art = m.getBitmap(MediaMetadata.METADATA_KEY_ART);
-        String kunci = art == null ? "" : art.getWidth() + "x" + art.getHeight() + ":" + art.getGenerationId() + teks(m, MediaMetadata.METADATA_KEY_TITLE);
-        if (kunci.equals(kunciSampul)) return;
-        kunciSampul = kunci;
-        if (art == null) { sampulData = ""; return; }
-        Bitmap kecil = Bitmap.createScaledBitmap(art, 200, 200 * art.getHeight() / Math.max(1, art.getWidth()), true);
-        ByteArrayOutputStream bo = new ByteArrayOutputStream();
-        kecil.compress(Bitmap.CompressFormat.JPEG, 82, bo);
-        sampulData = "data:image/jpeg;base64," + Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP);
-    }
 
     String labelApp(String pkg) {
         try { PackageManager pm = getPackageManager(); return pm.getApplicationLabel(pm.getApplicationInfo(pkg, 0)).toString(); }
@@ -622,29 +477,11 @@ public class MainActivity extends Activity {
         catch (Exception e) { h.post(() -> Toast.makeText(this, "Tidak bisa membuka tautan", Toast.LENGTH_SHORT).show()); }
     }
 
-    boolean buka(String pkg, boolean samping) {
+    boolean buka(String pkg) {
         Intent it = getPackageManager().getLaunchIntentForPackage(pkg);
         if (it == null) return false;
         it.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
-        // Kegagalan layar terbagi diingat (pref "splitGagal"): sesudah sekali terbukti gagal,
-        // semua jalur samping — tombol manual maupun navigasi otomatis — langsung membuka
-        // layar penuh tanpa mencoba-coba lagi dan tanpa toast berulang.
-        boolean cobaSplit = samping && !pref.getBoolean("splitGagal", false);
-        if (cobaSplit) it.addFlags(Intent.FLAG_ACTIVITY_LAUNCH_ADJACENT | Intent.FLAG_ACTIVITY_MULTIPLE_TASK);
-        final Intent fi = it;
-        h.post(() -> { try { startActivity(fi); } catch (Exception e) { } });
-        if (cobaSplit) h.postDelayed(() -> {
-            boolean ok = isInMultiWindowMode();
-            try { JSONObject o = new JSONObject(); o.put("type", "split"); o.put("ok", ok); o.put("pkg", pkg); event(o); } catch (Exception e) { }
-            if (!ok) {
-                pref.edit().putBoolean("splitGagal", true).apply();
-                // Toast penjelasan cukup sekali seumur pemasangan; sesudah itu diam.
-                if (!pref.getBoolean("splitToast", false)) {
-                    pref.edit().putBoolean("splitToast", true).apply();
-                    Toast.makeText(MainActivity.this, "HU tidak mendukung layar terbagi, aplikasi dibuka layar penuh", Toast.LENGTH_LONG).show();
-                }
-            }
-        }, 1800);
+        h.post(() -> { try { startActivity(it); } catch (Exception e) { } });
         return true;
     }
 
@@ -658,85 +495,11 @@ public class MainActivity extends Activity {
         return "data:image/png;base64," + Base64.encodeToString(bo.toByteArray(), Base64.NO_WRAP);
     }
 
-    /* ===== panel web YouTube di area kanan ===== */
-    void tampilPanel(String url, int x, int y, int w, int hh) {
-        float dpr = getResources().getDisplayMetrics().density;
-        float sk = dpr;
-        if (panel == null) {
-            panel = new WebView(this);
-            panel.setBackgroundColor(Color.BLACK);
-            WebSettings s = panel.getSettings();
-            s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setMediaPlaybackRequiresUserGesture(false);
-            panel.setWebViewClient(new WebViewClient() {
-                @Override public void onPageStarted(WebView v, String url, android.graphics.Bitmap fav) {
-                    // Hanya saat panel memang tampil (about:blank saat menutup tidak ikut menyalakan penanda).
-                    if (muatPanel != null && panel.getVisibility() == View.VISIBLE) muatPanel.setVisibility(View.VISIBLE);
-                }
-                @Override public void onPageFinished(WebView v, String url) {
-                    if (muatPanel != null) muatPanel.setVisibility(View.GONE);
-                }
-            });
-            panel.setWebChromeClient(new WebChromeClient());
-            root.addView(panel);
-            // Penanda memuat di atas latar hitam panel: halaman web (YouTube) bisa lambat,
-            // tanpa ini panel tampak pucat/rusak selama menunggu.
-            muatPanel = new android.widget.TextView(this);
-            muatPanel.setText("Memuat YouTube…");
-            muatPanel.setTextSize(17);
-            muatPanel.setTextColor(0xffcfe8ff);
-            muatPanel.setGravity(android.view.Gravity.CENTER);
-            muatPanel.setVisibility(View.GONE);
-            root.addView(muatPanel);
-            tutupPanel = new android.widget.TextView(this);
-            tutupPanel.setText("✕"); tutupPanel.setTextSize(22); tutupPanel.setTextColor(Color.WHITE);
-            tutupPanel.setGravity(android.view.Gravity.CENTER);
-            android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-            bg.setShape(android.graphics.drawable.GradientDrawable.OVAL); bg.setColor(0xcc101418); bg.setStroke(2, 0x66ffffff);
-            tutupPanel.setBackground(bg);
-            tutupPanel.setContentDescription("Tutup panel");
-            tutupPanel.setOnClickListener(v -> { v.playSoundEffect(SoundEffectConstants.CLICK); sembunyiPanel(); });
-            root.addView(tutupPanel);
-        }
-        int t = Math.round(52 * sk);
-        FrameLayout.LayoutParams lt = new FrameLayout.LayoutParams(t, t);
-        lt.leftMargin = Math.round((x + w - 60) * sk); lt.topMargin = Math.round((y + 8) * sk);
-        tutupPanel.setLayoutParams(lt); tutupPanel.setVisibility(View.VISIBLE); tutupPanel.bringToFront();
-        FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(Math.round(w * sk), Math.round(hh * sk));
-        lp.leftMargin = Math.round(x * sk); lp.topMargin = Math.round(y * sk);
-        panel.setLayoutParams(lp);
-        panel.setVisibility(View.VISIBLE);
-        panel.onResume();
-        muatPanel.setLayoutParams(lp);
-        String u = panel.getUrl();
-        boolean segar = u == null || u.startsWith("about:");
-        muatPanel.setVisibility(segar ? View.VISIBLE : View.GONE);
-        muatPanel.bringToFront();
-        if (segar) panel.loadUrl(url);
-        tutupPanel.bringToFront();
-        kirimPanel(true);
-    }
-
-    void sembunyiPanel() {
-        if (panel == null) return;
-        if (muatPanel != null) muatPanel.setVisibility(View.GONE);
-        panel.loadUrl("about:blank");        // suara YouTube ikut berhenti
-        panel.setVisibility(View.GONE);
-        if (tutupPanel != null) tutupPanel.setVisibility(View.GONE);
-        kirimPanel(false);
-    }
-
-    void kirimPanel(boolean buka) {
-        try { JSONObject o = new JSONObject(); o.put("type", "panel"); o.put("open", buka); event(o); } catch (Exception e) { }
-    }
-
     /** Fungsi yang dipanggil index.html lewat window.VarioBridge */
     class VarioBridge {
         @JavascriptInterface public void openApp(String pkg) {
-            if (!buka(pkg, false)) h.post(() -> Toast.makeText(MainActivity.this, "Aplikasi tidak terpasang", Toast.LENGTH_SHORT).show());
+            if (!buka(pkg)) h.post(() -> Toast.makeText(MainActivity.this, "Aplikasi tidak terpasang", Toast.LENGTH_SHORT).show());
         }
-        @JavascriptInterface public boolean openSplit(String pkg) { return buka(pkg, true); }
-        @JavascriptInterface public void showWebPanel(String url, int x, int y, int w, int hh) { h.post(() -> tampilPanel(url, x, y, w, hh)); }
-        @JavascriptInterface public void hideWebPanel() { h.post(MainActivity.this::sembunyiPanel); }
 
         @JavascriptInterface public String getApps() {
             JSONArray out = new JSONArray();
@@ -757,23 +520,6 @@ public class MainActivity extends Activity {
                 }
             } catch (Exception e) { }
             return out.toString();
-        }
-
-        @JavascriptInterface public void mediaControl(final String k) {
-            h.post(() -> {
-                if (ctl != null) {
-                    MediaController.TransportControls t = ctl.getTransportControls();
-                    if ("next".equals(k)) t.skipToNext();
-                    else if ("prev".equals(k)) t.skipToPrevious();
-                    else if ("pause".equals(k)) t.pause();
-                    else t.play();
-                } else {
-                    if (!izinMusik) { bukaIntent(new Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)); return; }
-                    int kode = "next".equals(k) ? KeyEvent.KEYCODE_MEDIA_NEXT : "prev".equals(k) ? KeyEvent.KEYCODE_MEDIA_PREVIOUS : KeyEvent.KEYCODE_MEDIA_PLAY_PAUSE;
-                    am.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, kode));
-                    am.dispatchMediaKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, kode));
-                }
-            });
         }
 
         @JavascriptInterface public void pickImage() {

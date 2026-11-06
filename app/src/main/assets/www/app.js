@@ -5,7 +5,6 @@
 //   (Panel kanan — split-screen + panel web — DIHAPUS atas keputusan pemilik:
 //    split terbukti ditolak ROM HU ini. Waze/YouTube dibuka layar penuh via openApp.)
 //   VarioBridge.getApps() -> JSON [{label,pkg,icon}]   (icon = data URI PNG)
-//   VarioBridge.mediaControl(cmd)            'play' | 'pause' | 'next' | 'prev'  (MediaSession aplikasi aktif)
 //   VarioBridge.pickImage()                  buka galeri, hasil dikirim lewat event {type:'wallpaper', data}
 //   VarioBridge.saveSettings(json) / loadSettings() -> json
 //   VarioBridge.duckMusic(bool)              kecilkan musik selama suara doa diputar
@@ -78,7 +77,7 @@ function fmtClock(H,M){if(cfg.fmt==='12'){const ap=H<12?'AM':'PM';return `${(H%1
 const hm=h=>{h=fixh(h);const m=Math.round(h*60)%1440;return fmtClock(Math.floor(m/60),m%60).replace(/<small>(.*)<\/small>/,' $1');};
 // ---------- teks UI ----------
 const HARI=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'],BLN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-let magrib=false;
+
 function tickUI(){
   const now=new Date();
   $('jam').innerHTML=fmtClock(now.getHours(),now.getMinutes());
@@ -86,7 +85,7 @@ function tickUI(){
   const np=nextPrayer(now);$('pName').textContent=np.name;$('pTime').textContent=hm(np.at);
   const lm=Math.max(0,Math.round(np.left*60));$('cd').textContent=lm>=60?`${Math.floor(lm/60)} jam ${lm%60} mnt lagi`:`${lm} mnt lagi`;
   const soon=lm<=10;$('jam').classList.toggle('pulse',soon);$('adz').classList.toggle('pulse',soon);
-  const m=np.h>=np.today.Maghrib-0.25&&np.h<np.today.Isya;if(m!==magrib){magrib=m;updHalo(true);}
+  
   const p=st.place;
   if(p){$('kec').textContent=p.kecamatan?`Kec. ${p.kecamatan}`:(p.kota||p.kabupaten||'Lokasi');
     $('kab').textContent=[p.kabupaten?`Kab. ${p.kabupaten}`:(p.kota?`Kota ${p.kota}`:''),p.provinsi].filter(Boolean).join(' · ');}
