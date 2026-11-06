@@ -8,7 +8,7 @@
 @font-face{font-family:"Overpass";src:url(fonts/Overpass-Bold.woff2) format("woff2");font-weight:700}
 @font-face{font-family:"Overpass";src:url(fonts/Overpass-ExtraBold.woff2) format("woff2");font-weight:800}
 /* Layar HU 1280x800. Tema showroom gelap: mobil kiri, info kanan, dock 5 ikon di bawah. */
-:root{--ink:#eef2f6;--dim:rgba(238,242,246,.62);--line:rgba(255,255,255,.12);
+:root{--ink:#eef2f6;--dim:rgba(238,242,246,.78);--line:rgba(255,255,255,.12);
   --acc:#5fb4ff;--acc-rgb:95,180,255;--glow:#cfe8ff;--panel:rgba(14,18,24,.82)}
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;background:#000;overflow:hidden}
@@ -28,7 +28,11 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 .ui{transition:opacity .4s}
 #app.foto .ui{opacity:0;pointer-events:none}
 /* lokasi */
-#loc{position:absolute;left:40px;top:30px;display:flex;gap:12px;align-items:flex-start;max-width:280px}
+#loc{position:absolute;left:40px;top:30px;display:flex;gap:12px;align-items:flex-start;max-width:600px}
+.kecrow{display:flex;align-items:center;gap:14px}
+#arah{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px 0 8px;border-radius:15px;border:1px solid rgba(var(--acc-rgb),.4);background:rgba(var(--acc-rgb),.08);font-size:15px;font-weight:700;color:var(--glow);white-space:nowrap}
+#arah[hidden]{display:none}
+#arah svg{width:18px;height:18px;stroke:var(--acc);fill:rgba(var(--acc-rgb),.25);stroke-width:1.8;stroke-linejoin:round;transition:transform .8s ease}
 #loc svg{width:26px;height:26px;margin-top:3px;flex:none}
 #kec{font-size:26px;font-weight:700;line-height:1.15}
 #kab{font-size:16px;color:var(--dim);margin-top:4px}
@@ -36,17 +40,25 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 /* jam & adzan */
 #status{position:absolute;right:40px;top:30px;display:flex;gap:28px;align-items:flex-start}
 #status .kiri{padding-top:10px}
-.adz{display:flex;align-items:center;gap:8px;font-size:19px}
-.adz b{font-size:26px;margin-left:2px}
-.adz svg,.cu svg{width:21px;height:21px}
-#cd{font-size:15px;color:var(--dim);margin-left:30px;margin-top:2px}
-.cu{display:flex;align-items:center;gap:8px;margin-top:8px;font-size:17px}
+.adz{display:flex;align-items:center;gap:14px}
+.ring{position:relative;width:62px;height:62px;flex:none}
+.ring svg{width:62px;height:62px;transform:rotate(-90deg)}
+.ring circle{fill:none;stroke-width:3.5}
+.ring .rb{stroke:rgba(var(--acc-rgb),.18)}
+.ring .rf{stroke:var(--acc);stroke-linecap:round;stroke-dasharray:131.95;stroke-dashoffset:131.95;filter:drop-shadow(0 0 4px rgba(var(--acc-rgb),.8));transition:stroke-dashoffset 1s linear}
+#cd{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:19px;font-weight:800;color:var(--glow);line-height:1}
+#cd small{font-size:10px;font-weight:700;color:var(--dim);letter-spacing:.1em;margin-top:3px}
+.adzT{display:flex;flex-direction:column;gap:2px}
+#pName{font-size:15px;color:var(--dim);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+#pTime{font-size:32px;line-height:1}
+.cu svg{width:21px;height:21px}
+.cu{display:flex;align-items:center;gap:8px;margin-top:12px;font-size:17px}
 .cu.off{display:none}
 #status .kanan{text-align:right}
 #jam{font-size:68px;line-height:.95;letter-spacing:-1px}
 #jam small{font-size:22px;font-weight:700;margin-left:4px}
 #tgl{font-size:17px;color:var(--dim);margin-top:8px}
-#jam.pulse,.adz.pulse b{animation:pulse 2.4s ease-in-out infinite}
+#jam.pulse,.adz.pulse #pTime,.adz.pulse .rf{animation:pulse 2.4s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.55}}
 /* mode jalan: info yang tidak perlu saat bergerak meredup (lokasi, cuaca, tanggal) */
 #loc,#cu,#tgl{transition:opacity .6s}
@@ -68,10 +80,10 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 .sheet h3{font-size:14px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);font-weight:600;margin:18px 0 10px}
 .x{width:52px;height:52px;border-radius:50%;border:1px solid var(--line);font-size:24px;display:grid;place-items:center}
 .grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px}
-.grid button{display:flex;flex-direction:column;align-items:center;gap:8px;padding:12px 4px;border-radius:16px;font-size:15px;font-weight:600;min-height:112px}
+.grid button{display:flex;flex-direction:column;align-items:center;gap:9px;padding:12px 4px;border-radius:18px;font-size:16px;font-weight:600;min-height:132px}
 .grid button:active{background:rgba(255,255,255,.06);transform:scale(.97)}
-.grid img,.grid .ph{width:60px;height:60px;border-radius:16px}
-.grid .ph{display:grid;place-items:center;border:1.5px solid var(--acc);color:var(--glow);font-size:26px;font-weight:800}
+.grid img,.grid .ph{width:76px;height:76px;border-radius:20px}
+.grid .ph,.acthead .ph{display:grid;place-items:center;border:1.5px solid var(--acc);color:var(--glow);font-size:30px;font-weight:800;background:rgba(var(--acc-rgb),.08)}
 .grid span{max-width:130px;text-align:center;line-height:1.2;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .hint{font-size:14px;color:var(--dim);margin-top:14px}
 .row{display:flex;flex-wrap:wrap;gap:10px}
@@ -106,7 +118,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 .sheet.small{width:560px}
 #homeBanner{position:absolute;left:50%;top:168px;transform:translateX(-50%);display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid rgba(255,200,80,.5);border-radius:28px;padding:6px 8px 6px 22px;font-size:16px;z-index:15}
 #homeBanner[hidden]{display:none}
-#perf{position:absolute;left:40px;top:120px;font:700 15px Overpass;color:var(--glow);letter-spacing:.04em;background:rgba(10,14,20,.6);border:1px solid var(--line);border-radius:14px;padding:6px 14px}
+#perf{position:absolute;left:40px;top:120px;font:800 16px Overpass;color:var(--glow);letter-spacing:.06em;background:linear-gradient(180deg,rgba(var(--acc-rgb),.14),rgba(8,12,18,.85));border:1px solid rgba(var(--acc-rgb),.45);border-radius:14px;padding:7px 16px;text-shadow:0 0 10px rgba(var(--acc-rgb),.7);box-shadow:0 0 18px rgba(var(--acc-rgb),.15)}
 #perf[hidden]{display:none}
 #hud{transition:transform .5s ease,bottom .5s ease,left .5s ease}
 #app.dockoff #hud{bottom:70px;transform:perspective(520px) rotateX(48deg) scale(1.4)}
@@ -135,6 +147,54 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 #doa .tr{font-size:15px;color:var(--dim);line-height:1.5;margin-top:8px}
 #doa .src{font-size:13px;color:var(--acc);margin-top:10px;font-weight:600;opacity:.85}
 #doa .wkt{position:absolute;left:0;bottom:0;height:3px;width:100%;background:var(--acc);box-shadow:0 0 10px rgba(var(--acc-rgb),.8);transform-origin:left;transform:scaleX(1)}
+/* pengaturan: tinggi tetap, sakelar, thumbnail */
+.sheet.tema{height:600px;display:flex;flex-direction:column;overflow:hidden}
+.panes{flex:1;overflow:auto;padding-right:4px}
+.sws{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px}
+.swr{display:flex;align-items:center;justify-content:space-between;gap:14px;min-height:72px;padding:12px 18px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.03);text-align:left}
+.swr:active{transform:scale(.98)}
+.swr>span{display:flex;flex-direction:column;gap:3px;font-size:17px;font-weight:700}
+.swr small{font-size:13.5px;font-weight:400;color:var(--dim)}
+.swr i{position:relative;flex:none;width:54px;height:30px;border-radius:15px;background:rgba(255,255,255,.14);transition:background .25s}
+.swr i::after{content:"";position:absolute;left:3px;top:3px;width:24px;height:24px;border-radius:50%;background:#cfd6de;transition:transform .25s,background .25s}
+.swr[aria-checked="true"]{border-color:rgba(var(--acc-rgb),.45);background:rgba(var(--acc-rgb),.07)}
+.swr[aria-checked="true"] i{background:var(--acc);box-shadow:0 0 12px rgba(var(--acc-rgb),.6)}
+.swr[aria-checked="true"] i::after{transform:translateX(24px);background:#fff}
+.wgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px}
+.wt{display:flex;flex-direction:column;gap:7px;font-size:14px;font-weight:600;color:var(--dim);text-align:center}
+.wt canvas,.wt .add{width:100%;aspect-ratio:16/10;border-radius:14px;border:2px solid var(--line);display:grid;place-items:center;background:rgba(255,255,255,.03)}
+.wt .add svg{width:30px;height:30px;stroke:var(--dim);fill:none;stroke-width:1.8;stroke-linecap:round}
+.wt[aria-pressed="true"]{color:var(--glow)}
+.wt[aria-pressed="true"] canvas,.wt[aria-pressed="true"] .add{border-color:var(--acc);box-shadow:0 0 16px rgba(var(--acc-rgb),.45)}
+.wt:active{transform:scale(.97)}
+.swatch{width:52px;height:52px;border-radius:50%;display:grid;place-items:center;border:2px solid transparent}
+.swatch i{width:34px;height:34px;border-radius:50%}
+.swatch[aria-pressed="true"]{border-color:var(--ink)}
+.swatch:active{transform:scale(.94)}
+.chip.on{border-color:var(--acc);color:var(--glow);background:rgba(var(--acc-rgb),.12)}
+.chip svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.chip.aksi{border-style:dashed;border-color:rgba(var(--acc-rgb),.55);color:var(--glow)}
+.verrow{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-top:18px;padding:16px 18px;border-radius:18px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.verrow b{display:block;font-size:19px}
+.verrow #ver{font-size:15px;color:var(--dim)}
+#updT{margin-top:10px}
+#updT:empty{display:none}
+/* popup: latar ikut aksen */
+.sheet{background:linear-gradient(180deg,rgba(var(--acc-rgb),.12),rgba(8,12,18,.94) 30%),rgba(8,12,18,.94);border:1px solid rgba(var(--acc-rgb),.30);
+  box-shadow:0 18px 60px rgba(0,0,0,.55),0 0 46px rgba(var(--acc-rgb),.14)}
+.sheet h3{color:var(--acc)}
+#toast,#updBanner,#homeBanner{background:linear-gradient(180deg,rgba(var(--acc-rgb),.16),rgba(8,12,18,.94));box-shadow:0 10px 30px rgba(0,0,0,.5),0 0 24px rgba(var(--acc-rgb),.18)}
+#toast{border-color:rgba(var(--acc-rgb),.4)}
+/* menu tekan lama aplikasi */
+.sheet.act{width:460px}
+.acthead{display:flex;align-items:center;gap:16px;margin-bottom:14px}
+.acthead img,.acthead .ph{width:64px;height:64px;border-radius:18px;flex:none}
+.actb{display:flex;align-items:center;gap:16px;width:100%;height:62px;padding:0 18px;border-radius:16px;font-size:18px;font-weight:600;margin-top:8px;border:1px solid var(--line);background:rgba(255,255,255,.03)}
+.actb:active{transform:scale(.98);background:rgba(var(--acc-rgb),.1)}
+.actb svg{width:26px;height:26px;stroke:var(--acc);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+/* dock: slot yang bisa diganti berkedip */
+#dock button.pilih{animation:kedip 1s ease-in-out infinite;box-shadow:inset 0 0 0 2px rgba(var(--acc-rgb),.7)}
+@keyframes kedip{50%{background:rgba(var(--acc-rgb),.18)}}
 </style></head><body>
 <div id="stage"><div id="app">
   <div id="bg"></div><div id="wallfx-wrap"><canvas id="wallfx" width="1280" height="800"></canvas></div><div id="halo"></div>
@@ -143,7 +203,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
   <div id="loading">Memuat mobil…</div>
 
   <div id="loc" class="ui"><svg class="ic" viewBox="0 0 24 24"><path d="M12 21s-7-6.2-7-11.5A7 7 0 0119 9.5C19 14.8 12 21 12 21z"/><circle cx="12" cy="9.5" r="2.5"/></svg>
-    <div><div id="kec">Mencari lokasi…</div><div id="kab"></div></div></div>
+    <div><div class="kecrow"><div id="kec">Mencari lokasi…</div><span id="arah" hidden aria-label="Arah"><svg viewBox="0 0 24 24" id="arahIc"><path d="M12 3l6 17-6-4-6 4z"/></svg><span id="arahT"></span></span></div><div id="kab"></div></div></div>
 
   <div id="doa" class="ui off" aria-live="polite"><div class="salam" id="salam">Assalamu'alaikum, Mas</div><div class="sub" id="doaSub">Semoga selamat sampai tujuan</div><div class="jd"><i></i>Doa naik kendaraan<i></i></div>
     <div class="ar" dir="rtl" lang="ar"><span>سُبْحٰنَ الَّذِيْ سَخَّرَ لَنَا هٰذَا وَمَا كُنَّا لَهٗ مُقْرِنِيْنَۙ</span><span>وَاِنَّآ اِلٰى رَبِّنَا لَمُنْقَلِبُوْنَ</span></div>
@@ -152,8 +212,8 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
     <div class="src">QS. Az-Zukhruf [43]: 13–14 · Terjemahan Kemenag RI</div><div class="wkt" id="doaWkt"></div></div>
 
   <div id="status" class="ui">
-    <div class="kiri"><div class="adz" id="adz"><svg class="ic" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 119.5 4a6.5 6.5 0 0010.5 10.5z"/></svg><span id="pName">Isya</span> <b class="glow" id="pTime">--:--</b></div>
-      <div id="cd"></div>
+    <div class="kiri"><div class="adz" id="adz"><div class="ring" aria-hidden="true"><svg viewBox="0 0 48 48"><circle class="rb" cx="24" cy="24" r="21"/><circle class="rf" id="ringF" cx="24" cy="24" r="21"/></svg><span id="cd"></span></div>
+      <div class="adzT"><span id="pName">Isya</span><b class="glow" id="pTime">--:--</b></div></div>
       <div class="cu off" id="cu"><svg class="ic" viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 00.6-7.95A6 6 0 006.1 9.1 4.5 4.5 0 007 18z"/></svg><span id="wx"></span><span id="wxSrc" class="wxsrc"></span></div></div>
     <div class="kanan"><div id="jam" class="glow">--:--</div><div id="tgl"></div></div>
   </div>
@@ -166,54 +226,60 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
     <header><h2>Aplikasi</h2><button class="x" data-close aria-label="Tutup">✕</button></header>
     <h3>Terakhir dipakai</h3><div class="grid" id="recent"></div>
     <h3>Semua aplikasi</h3><div class="grid" id="allApps"></div>
-    <p class="hint">Tekan lama ikon untuk memasangnya ke dock.</p></div></div>
+    <div class="row" style="margin-top:14px"><button class="chip" id="hidBtn" hidden></button></div>
+    <div class="grid" id="hidApps" hidden style="margin-top:10px;opacity:.7"></div>
+    <p class="hint">Tekan lama ikon untuk pasang ke dock, sembunyikan, atau lihat info aplikasi.</p></div></div>
+
+  <div class="pop" id="popAct" role="dialog" aria-modal="true" aria-labelledby="actT"><div class="sheet small act">
+    <div class="acthead"><span id="actIc"></span><h2 id="actT"></h2></div>
+    <button class="actb" id="actDock"><svg viewBox="0 0 24 24"><rect x="3" y="15" width="18" height="5" rx="2"/><path d="M12 3v8M8 7l4 4 4-4"/></svg><span>Pasang ke dock</span></button>
+    <button class="actb" id="actHide"><svg viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 6.1A9.8 9.8 0 0112 6c5 0 9 6 9 6a16 16 0 01-3 3.6M6.6 6.6C4.2 8.2 3 12 3 12s4 6 9 6a8.6 8.6 0 004.4-1.2"/></svg><span>Sembunyikan</span></button>
+    <button class="actb" id="actInfo"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v6M12 7.5v.5"/></svg><span>Info aplikasi</span></button>
+    <button class="chip" data-close style="margin-top:12px;width:100%;justify-content:center">Batal</button></div></div>
 
   <div class="pop" id="popPick" role="dialog" aria-modal="true" aria-label="Pilih aplikasi dock"><div class="sheet">
     <header><h2 id="pickT">Ganti ikon dock</h2><button class="x" data-close aria-label="Tutup">✕</button></header>
     <div class="grid" id="pickGrid"></div></div></div>
 
-  <div class="pop" id="popTema" role="dialog" aria-modal="true" aria-label="Pengaturan tema"><div class="sheet">
-    <header><h2>Tema launcher</h2><button class="x" data-close aria-label="Tutup">✕</button></header>
-    <div class="tabs" role="tablist"><button role="tab" data-tab="tampilan" aria-selected="true">Tampilan</button><button role="tab" data-tab="mobil" aria-selected="false">Mobil</button><button role="tab" data-tab="sistem" aria-selected="false">Sistem</button><button role="tab" data-tab="info" aria-selected="false">Info</button></div>
+  <div class="pop" id="popTema" role="dialog" aria-modal="true" aria-label="Pengaturan"><div class="sheet tema">
+    <header><h2>Pengaturan</h2><button class="x" data-close aria-label="Tutup">✕</button></header>
+    <div class="tabs" role="tablist"><button role="tab" data-tab="tampilan" aria-selected="true">Tampilan</button><button role="tab" data-tab="mobil" aria-selected="false">Mobil</button><button role="tab" data-tab="sapaan" aria-selected="false">Sapaan</button><button role="tab" data-tab="sistem" aria-selected="false">Sistem</button><button role="tab" data-tab="info" aria-selected="false">Info</button></div>
+    <div class="panes">
     <section data-pane="tampilan">
-      <h3>Wallpaper</h3><div class="row" id="walls"></div>
-      <div class="row" style="margin-top:10px"><button class="chip" id="tGerak" aria-pressed="true">Gerak wallpaper</button></div>
+      <h3>Wallpaper</h3><div class="wgrid" id="walls"></div>
       <h3>Warna aksen</h3><div class="row" id="accents"></div>
-      <h3>Format jam</h3><div class="row"><button class="chip" data-fmt="24">24 jam</button><button class="chip" data-fmt="12">12 jam</button></div>
+      <div class="sws"><button class="swr" id="tGerak" role="switch"><span>Gerak wallpaper<small>Wallpaper hidup bergerak pelan</small></span><i></i></button>
+        <button class="swr" id="tFmt" role="switch"><span>Format 24 jam<small>Mati = 12 jam (AM/PM)</small></span><i></i></button></div>
     </section>
     <section data-pane="mobil" hidden>
       <h3>Sudut kamera</h3><div class="row" id="views"></div>
-      <h3>Mobil</h3><div class="row">
-        <button class="chip" id="tLampu" aria-pressed="false">Lampu</button>
-        <button class="chip" id="tPutar" aria-pressed="false">Meja putar</button>
-        <button class="chip" id="tFoto">Mode foto</button>
-        <button class="chip" id="tBeep" aria-pressed="true">Bunyi peringatan &gt;100</button></div>
-      <h3>Pelat nomor</h3><div class="row" id="plates"></div>
+      <div class="sws"><button class="swr" id="tPutar" role="switch"><span>Meja putar<small>Mobil berputar pelan saat diam</small></span><i></i></button>
+        <button class="swr" id="tPlat" role="switch"><span>Tampilkan pelat<small>Pelat nomor di depan &amp; belakang</small></span><i></i></button></div>
       <div class="row inrow" id="plateEdit" hidden>
-        <label>Nomor<input id="plNo" maxlength="12" placeholder="AD 1234 XY" autocomplete="off"></label>
-        <label>Berlaku<input id="plExp" maxlength="5" placeholder="03.27" autocomplete="off"></label>
-        <span class="hint" style="margin:0 0 14px">Tersimpan otomatis</span></div>
+        <label>Nomor pelat<input id="plNo" maxlength="12" placeholder="AD 1481 YH" autocomplete="off"></label>
+        <label>Berlaku<input id="plExp" maxlength="5" placeholder="06.07" autocomplete="off"></label></div>
+    </section>
+    <section data-pane="sapaan" hidden>
+      <h3>Nama sapaan</h3><div class="row inrow"><label>Dipanggil<input id="nama" maxlength="20" autocomplete="off" placeholder="Mas"></label><span class="hint" id="namaPrev" style="margin:0 0 15px"></span></div>
+      <div class="sws"><button class="swr" id="tDoa" role="switch"><span>Suara doa<small>Tartil diputar saat launcher menyala</small></span><i></i></button>
+        <button class="swr" id="tBeep" role="switch"><span>Bunyi peringatan<small>Saat melaju di atas 100 km/jam</small></span><i></i></button></div>
     </section>
     <section data-pane="sistem" hidden>
-      <h3>Pembaruan</h3>
-      <div class="row"><button class="chip" id="tUpd">Periksa pembaruan</button><button class="chip" id="tUpdGo" hidden>Unduh &amp; pasang</button><span class="hint" id="updT" style="margin:0;align-self:center"></span></div>
-      <div class="notes" id="updNotes" hidden></div>
-      <h3>Nama sapaan</h3><div class="row inrow"><label>Nama<input id="nama" maxlength="20" autocomplete="off"></label><button class="chip" id="namaSave">Simpan</button></div>
-      <h3>Perawatan</h3><div class="row">
-        <button class="chip" id="tHemat" aria-pressed="false">Mode grafis hemat</button>
-        <button class="chip" id="tPerf" aria-pressed="false">Info FPS &amp; RAM</button>
-        <button class="chip warn" id="tReset">Reset semua pengaturan</button></div>
+      <div class="sws"><button class="swr" id="tHemat" role="switch"><span>Mode grafis hemat<small>Tanpa pantulan, asap &amp; efek</small></span><i></i></button>
+        <button class="swr" id="tPerf" role="switch"><span>Info FPS &amp; RAM<small>Kotak kecil di kiri atas</small></span><i></i></button></div>
       <h3>Cadangan pengaturan</h3><div class="row"><button class="chip" id="tEks">Simpan cadangan</button><button class="chip" id="tImp">Pulihkan dari file</button></div>
+      <h3>Atur ulang</h3><div class="row"><button class="chip warn" id="tReset">Reset semua pengaturan</button></div>
     </section>
     <section data-pane="info" hidden>
-      <h3>Tentang</h3>
-      <div class="about"><b>Luxio VARIO Launcher</b> <span id="ver">versi pratinjau</span></div>
-            <h3>Kredit</h3>
+      <div class="verrow"><div><b>Luxio VARIO Launcher</b><span id="ver">versi pratinjau</span></div>
+        <div class="row"><button class="chip" id="tUpd">Periksa pembaruan</button><button class="chip on" id="tUpdGo" hidden>Unduh &amp; pasang</button></div></div>
+      <p class="hint" id="updT"></p>
+      <div class="notes" id="updNotes" hidden></div>
+      <h3>Kredit</h3>
       <div class="about">Suara doa: Mishary Rashid Alafasy, via everyayah.com · Teks terjemahan: Kemenag RI<br>
-        Cuaca: BMKG (Badan Meteorologi, Klimatologi, dan Geofisika) · Data wilayah: Kepmendagri via geografis (MIT)<br>
-        Mesin 3D: three.js (MIT) · Huruf: Overpass (OFL)</div>
+        Cuaca: BMKG · Data wilayah: Kepmendagri via geografis (MIT) · Mesin 3D: three.js (MIT) · Huruf: Overpass (OFL)</div>
     </section>
-    <p class="hint">Pengaturan tersimpan otomatis.</p></div></div>
+    </div></div></div>
 
   <div class="pop" id="popConfirm" role="alertdialog" aria-modal="true" aria-labelledby="cfT"><div class="sheet small">
     <h2 id="cfT"></h2><p id="cfD" class="hint" style="font-size:17px"></p>

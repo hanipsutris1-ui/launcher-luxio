@@ -36,7 +36,7 @@ const call=(fn,...a)=>{try{if(bridge&&typeof bridge[fn]==='function')return brid
 
 // ---------- pengaturan (tersimpan otomatis) ----------
 const DEF={hemat:false,beep:true,nama:'Mas',plate:'kosong',plNo:'',plExp:'',perf:false,lastLat:null,lastLon:null,lastKota:null,accent:'biru',fmt:'24',wall:'showroom',wallData:null,wallMotion:true,doaSuara:true,turntable:false,lights:null,trip:0,updLast:null,
-  dock:['nav','yt','tema','lampu','apps'],custom:{},recent:[]};
+  dock:['nav','yt','tema','lampu','apps'],custom:{},recent:[],hidden:[]};
 let cfg={...DEF};
 try{const s=call('loadSettings')||localStorage.getItem('vario.cfg');if(s)cfg={...DEF,...JSON.parse(s)};}catch(e){}
 let saveT=0,saveWarned=false;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{const s=JSON.stringify(cfg);call('saveSettings',s);if(bridge&&bridge.saveSettings)return;
@@ -78,17 +78,24 @@ const hm=h=>{h=fixh(h);const m=Math.round(h*60)%1440;return fmtClock(Math.floor(
 // ---------- teks UI ----------
 const HARI=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'],BLN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 
+const ARAH=['Utara','Timur Laut','Timur','Tenggara','Selatan','Barat Daya','Barat','Barat Laut'];
 function tickUI(){
   const now=new Date();
   $('jam').innerHTML=fmtClock(now.getHours(),now.getMinutes());
   $('tgl').textContent=`${HARI[now.getDay()]}, ${now.getDate()} ${BLN[now.getMonth()]} ${now.getFullYear()}`;
   const np=nextPrayer(now);$('pName').textContent=np.name;$('pTime').textContent=hm(np.at);
-  const lm=Math.max(0,Math.round(np.left*60));$('cd').textContent=lm>=60?`${Math.floor(lm/60)} jam ${lm%60} mnt lagi`:`${lm} mnt lagi`;
+  const lm=Math.max(0,Math.round(np.left*60));$('cd').innerHTML=lm>=60?`${Math.floor(lm/60)}:${pad(lm%60)}<small>JAM</small>`:`${lm}<small>MNT</small>`;
+  // cincin: makin penuh mendekati adzan (dihitung dari waktu sholat sebelumnya)
+  {const O=['Subuh','Dzuhur','Ashar','Maghrib','Isya'],i=O.indexOf(np.name);let prev=(np.name==='Subuh')?np.today.Isya:np.today[O[i-1]];
+   if(np.name==='Subuh'&&np.h<np.today.Subuh)prev-=24;const tot=(np.h-prev)+np.left,fr=tot>0?Math.min(1,Math.max(0,(np.h-prev)/tot)):0;
+   $('ringF').style.strokeDashoffset=(131.95*(1-fr)).toFixed(1);}
   const soon=lm<=10;$('jam').classList.toggle('pulse',soon);$('adz').classList.toggle('pulse',soon);
   
   const p=st.place;
   if(p){$('kec').textContent=p.kecamatan?`Kec. ${p.kecamatan}`:(p.kota||p.kabupaten||'Lokasi');
     $('kab').textContent=[p.kabupaten?`Kab. ${p.kabupaten}`:(p.kota?`Kota ${p.kota}`:''),p.provinsi].filter(Boolean).join(' · ');}
+  const ar=$('arah'),lockA=st.bearing!=null&&((SIM&&st.simGps)||(st.gps&&performance.now()-(st.gpsAt||0)<5000));ar.hidden=!lockA;
+  if(lockA){const b=((st.bearing%360)+360)%360;$('arahT').textContent=ARAH[Math.round(b/45)%8];$('arahIc').style.transform=`rotate(${Math.round(b)}deg)`;}
   const hasWx=st.temp!=null;$('cu').classList.toggle('off',!hasWx);if(hasWx){$('wx').textContent=`${Math.round(st.temp)}°C · ${st.wx||''}`;$('wxSrc').textContent=st.wxSrc||'';}
 }
 setInterval(tickUI,1000);
@@ -158,7 +165,7 @@ document.addEventListener('visibilitychange',()=>{if(!document.hidden)fxKick();}
 
 // ---------- event dari Android ----------
 window.vario={onEvent(e){
-  if(e.type==='gps'){st.gps=true;st.gpsAt=performance.now();if(e.trip!=null){cfg.trip=e.trip;hudDirty=true;}st.lat=e.lat;st.lon=e.lon;if(Math.abs((cfg.lastLat||0)-e.lat)+Math.abs((cfg.lastLon||0)-e.lon)>0.01){cfg.lastLat=e.lat;cfg.lastLon=e.lon;save();}setSpeed((e.speed||0)*3.6);if(e.bearing!=null&&st.speed>3)turnFrom(e.bearing);}
+  if(e.type==='gps'){st.gps=true;st.gpsAt=performance.now();if(e.trip!=null){cfg.trip=e.trip;hudDirty=true;}st.lat=e.lat;st.lon=e.lon;if(Math.abs((cfg.lastLat||0)-e.lat)+Math.abs((cfg.lastLon||0)-e.lon)>0.01){cfg.lastLat=e.lat;cfg.lastLon=e.lon;save();}setSpeed((e.speed||0)*3.6);if(e.bearing!=null&&st.speed>3){turnFrom(e.bearing);st.bearing=e.bearing;}}
   else if(e.type==='place'){st.place=e;cfg.lastKota=e;save();}
   else if(e.type==='lampu'){st.lampuKota=!!e.on;cfg.lampuKota=st.lampuKota;cfg.lights=null;save();updDim();applyLights&&applyLights();need();}
   else if(e.type==='home'){$('homeBanner').hidden=!!e.isDefault;}
@@ -209,18 +216,34 @@ function openPop(id){document.querySelectorAll('.pop.on').forEach(p=>p.classList
 function closePop(){document.querySelectorAll('.pop.on').forEach(p=>p.classList.remove('on'));}
 document.querySelectorAll('.pop').forEach(p=>p.addEventListener('click',e=>{if(e.target===p||e.target.closest('[data-close]'))closePop();}));
 let pinPkg=null;
+let pinT=0;
+function startPin(a){pinPkg=a.pkg;closePop();renderDock();toast(`Ketuk ikon dock yang berkedip untuk diganti ${a.label}`);
+  clearTimeout(pinT);pinT=setTimeout(()=>{if(pinPkg){pinPkg=null;renderDock();}},10000);}
+let actApp=null;
+function appMenu(a){actApp=a;const hid=cfg.hidden.includes(a.pkg);
+  $('actIc').innerHTML=a.icon?`<img src="${a.icon}" alt="">`:`<span class="ph">${(a.label||'?')[0]}</span>`;$('actT').textContent=a.label;
+  $('actHide').lastChild.textContent=hid?'Tampilkan lagi':'Sembunyikan';openPop('popAct');}
+$('actDock').onclick=()=>{if(actApp)startPin(actApp);};
+$('actHide').onclick=()=>{if(!actApp)return;const p=actApp.pkg,hid=cfg.hidden.includes(p);
+  cfg.hidden=hid?cfg.hidden.filter(x=>x!==p):[...cfg.hidden,p];save();toast(hid?`${actApp.label} ditampilkan lagi`:`${actApp.label} disembunyikan`);showApps();};
+$('actInfo').onclick=()=>{if(!actApp)return;closePop();if(bridge&&bridge.appInfo)call('appInfo',actApp.pkg);else toast(`Simulasi: info aplikasi ${actApp.label}`);};
+let lihatSembunyi=false;
 function showApps(){const all=getApps().slice().sort((a,b)=>a.label.localeCompare(b.label,'id'));
-  const pin=a=>{pinPkg=a.pkg;closePop();toast(`Ketuk ikon dock yang mau diganti dengan ${a.label}`);renderDock();};
-  const rec=$('recent');rec.innerHTML='';const rl=cfg.recent.map(p=>all.find(a=>a.pkg===p)).filter(Boolean);
-  rec.parentElement.querySelector('h3').hidden=!rl.length;
-  rl.forEach(a=>rec.appendChild(appTile(a,()=>{closePop();openApp(a.pkg,a.label);},()=>pin(a))));
-  const g=$('allApps');g.innerHTML='';all.forEach(a=>g.appendChild(appTile(a,()=>{closePop();openApp(a.pkg,a.label);},()=>pin(a))));
-  openPop('popApps');}
+  const vis=all.filter(a=>!cfg.hidden.includes(a.pkg)),hid=all.filter(a=>cfg.hidden.includes(a.pkg));
+  const tile=a=>appTile(a,()=>{closePop();openApp(a.pkg,a.label);},()=>appMenu(a));
+  const rec=$('recent');rec.innerHTML='';const rl=cfg.recent.map(p=>vis.find(a=>a.pkg===p)).filter(Boolean);
+  rec.previousElementSibling.hidden=!rl.length;rl.forEach(a=>rec.appendChild(tile(a)));
+  const g=$('allApps');g.innerHTML='';vis.forEach(a=>g.appendChild(tile(a)));
+  const hb=$('hidBtn'),hg=$('hidApps');hb.hidden=!hid.length;if(!hid.length)lihatSembunyi=false;
+  hb.textContent=lihatSembunyi?'Tutup aplikasi tersembunyi':`Aplikasi tersembunyi (${hid.length})`;
+  hg.hidden=!lihatSembunyi;hg.innerHTML='';if(lihatSembunyi)hid.forEach(a=>hg.appendChild(tile(a)));
+  if(!$('popApps').classList.contains('on'))openPop('popApps');}
+$('hidBtn').onclick=()=>{lihatSembunyi=!lihatSembunyi;showApps();};
 
 // ---------- dock ----------
 const DOCK={nav:{label:'Navigasi',svg:'<path d="M3 11l18-8-8 18-2-8z"/>',run:()=>openWaze()},
   yt:{label:'YouTube',svg:'<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3z"/>',run:()=>openYT()},
-  tema:{label:'Tema',fixed:true,svg:'<path d="M5 17h14l-1.5-6.5A2 2 0 0015.6 9H8.4a2 2 0 00-1.9 1.5zM4 17v2M20 17v2"/><circle cx="8" cy="14" r="1"/><circle cx="16" cy="14" r="1"/>',run:()=>{renderTema();openPop('popTema');}},
+  tema:{label:'Pengaturan',fixed:true,svg:'<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 11-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 11-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 11-2.83-2.83l.06-.06A1.65 1.65 0 004.6 15a1.65 1.65 0 00-1.51-1H3a2 2 0 110-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 112.83-2.83l.06.06A1.65 1.65 0 009 4.6a1.65 1.65 0 001-1.51V3a2 2 0 114 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 112.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 110 4h-.09a1.65 1.65 0 00-1.51 1z"/>',run:()=>{renderTema();openPop('popTema');}},
   lampu:{label:'Lampu',svg:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M17 7l2-2"/>',run:()=>toggleLights()},
   apps:{label:'Aplikasi',fixed:true,svg:'<rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/>',run:()=>showApps()}};
 let pickSlot=-1;
@@ -228,10 +251,10 @@ function renderDock(){const d=$('dock');d.innerHTML='';
   cfg.dock.forEach((id,i)=>{let b;const def=DOCK[id];
     if(def){b=document.createElement('button');b.innerHTML=`<svg viewBox="0 0 24 24">${def.svg}</svg>${def.label}`;if(id==='lampu'){b.id='dLampu';b.classList.toggle('on',lightsOn());}}
     else{const a=cfg.custom[id]||findApp(id);b=document.createElement('button');b.innerHTML=(a.icon?`<img src="${a.icon}" alt="">`:`<svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/></svg>`)+(a.label||id);}
-    b.setAttribute('aria-label',b.textContent);
-    holdable(b,()=>{if(pinPkg){if(DOCK[id]&&DOCK[id].fixed){toast('Ikon Tema dan Aplikasi tidak bisa diganti');return;}placeApp(i,pinPkg);pinPkg=null;return;}
+    b.setAttribute('aria-label',b.textContent);if(pinPkg&&!(def&&def.fixed))b.classList.add('pilih');
+    holdable(b,()=>{if(pinPkg){if(DOCK[id]&&DOCK[id].fixed){toast('Ikon Pengaturan dan Aplikasi tidak bisa diganti');return;}placeApp(i,pinPkg);pinPkg=null;clearTimeout(pinT);return;}
       if(def)def.run();else openApp(id,(cfg.custom[id]||{}).label);},
-      ()=>{if(def&&def.fixed){toast('Ikon Tema dan Aplikasi tidak bisa diganti');return;}pickSlot=i;showPick();});
+      ()=>{if(def&&def.fixed){toast('Ikon Pengaturan dan Aplikasi tidak bisa diganti');return;}pickSlot=i;showPick();});
     d.appendChild(b);});}
 function placeApp(i,pkg){const a=findApp(pkg);cfg.custom[pkg]={label:a.label,icon:a.icon||null};cfg.dock[i]=pkg;save();renderDock();toast(`${a.label} dipasang di dock`);}
 function showPick(){const g=$('pickGrid');g.innerHTML='';
@@ -259,7 +282,7 @@ function doaBar(ms){const b=$('doaWkt');b.style.transition='none';b.style.transf
 async function showDoa(){const d=$('doa');$('salam').textContent=`Assalamu'alaikum, ${cfg.nama||'Mas'}`;
   const jam=new Date().getHours();$('doaSub').textContent=`Selamat ${jam<11?'pagi':jam<15?'siang':jam<18?'sore':'malam'} · semoga selamat sampai tujuan`;
   d.classList.remove('off');doaBar(12000);doaOn=true;updPerf();const ld=$('loading');if(ld&&!carReady)ld.style.visibility='hidden';let ms=12000;
-  {try{const src=(await import('./doa.js')).default;doaAudio=new Audio(src);doaAudio.volume=0.9;
+  if(cfg.doaSuara){try{const src=(await import('./doa.js')).default;doaAudio=new Audio(src);doaAudio.volume=0.9;
       call('duckMusic',true);   // Android: kecilkan musik selama doa (audio focus)
       await doaAudio.play();ms=Math.max(ms,(doaAudio.duration||19.5)*1000+800);doaBar(ms);
       doaAudio.addEventListener('ended',()=>call('duckMusic',false),{once:true});}catch(e){call('duckMusic',false);}}
@@ -283,7 +306,7 @@ const HOME=[5.5,2.0,6.0],TGT=[0,0.8,0];camera.position.set(...HOME);sizeGL();
 const controls=new OrbitControls(camera,canvas);controls.target.set(...TGT);
 controls.enableDamping=true;controls.enablePan=false;controls.minDistance=5;controls.maxDistance=14;controls.maxPolarAngle=Math.PI*0.47;controls.rotateSpeed=0.6;controls.autoRotateSpeed=0.8;
 controls.update();controls.addEventListener('change',need);
-const VIEWS={'Serong Kiri':[HOME,TGT],'Serong Kanan':[[-5.5,2.0,6.0],TGT],Depan:[[0.6,1.7,9.2],[0,0.8,0]],Belakang:[[-0.6,1.9,-9.2],[0,0.8,0]],Kiri:[[9.2,1.6,0.2],[0,0.8,0]],Kanan:[[-9.2,1.6,0.2],[0,0.8,0]],Atas:[[0.01,11,0.6],[0,0,0.6]]};
+const VIEWS={'Serong Kiri':[HOME,TGT],'Serong Kanan':[[-5.5,2.0,6.0],TGT],Depan:[[0.6,1.7,9.2],[0,0.8,0]],Belakang:[[-0.6,1.9,-9.2],[0,0.8,0]],Atas:[[0.01,11,0.6],[0,0,0.6]]};
 let tween=null;
 function goView(n){const [p,t]=VIEWS[n];tween={k:0,p0:camera.position.clone(),p1:new THREE.Vector3(...p),t0:controls.target.clone(),t1:new THREE.Vector3(...t)};need();}
 
@@ -430,40 +453,53 @@ renderer.setAnimationLoop(loop);
 // ---------- menu Tema ----------
 document.querySelectorAll('.tabs [data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs [data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
   document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==b.dataset.tab);});
+const sw=(id,on)=>$(id).setAttribute('aria-checked',String(!!on));
+const PLAT_DEF=['AD 1481 YH','06.07'];
+function platOn(){return cfg.plate!=='kosong';}
+// thumbnail wallpaper: digambar dari wallpaper aslinya (ikut warna aksen), disimpan per aksen
+let thumbs={},thumbAcc='';
+function wallThumb(id){if(thumbAcc!==cfg.accent){thumbs={};thumbAcc=cfg.accent;}if(thumbs[id])return thumbs[id];
+  const c=document.createElement('canvas');c.width=192;c.height=120;const g=c.getContext('2d');
+  if(id==='showroom'){const gr=g.createRadialGradient(96,70,4,96,70,130);gr.addColorStop(0,'#2a3442');gr.addColorStop(.5,'#121820');gr.addColorStop(1,'#07090c');g.fillStyle=gr;g.fillRect(0,0,192,120);}
+  else if(FX[id]){const keep=fxName;fxInit(id);fxDraw(0.6);g.drawImage(wc,0,0,192,120);if(FX[cfg.wall])fxInit(cfg.wall);else fxName=keep;}
+  else if(id==='galeri'&&cfg.wallData){const im=new Image();im.onload=()=>{g.drawImage(im,0,0,192,120);};im.src=cfg.wallData;}
+  return thumbs[id]=c;}
 function renderTema(){
   if(cfg.updLast&&!updInfo)updInfo=cfg.updLast;if(updInfo){const vc2=+(call('getVersionCode')||0);const baru2=vc2&&updInfo.n>vc2;$('updT').textContent=!vc2?`Terbaru di GitHub: ${updInfo.tag}`:(baru2?`Versi baru ${updInfo.tag} tersedia`:'Sudah versi terbaru');$('updNotes').hidden=!updInfo.notes;$('updNotes').textContent=updInfo.notes?`Catatan rilis ${updInfo.tag}:\n${updInfo.notes}`:'';$('tUpdGo').hidden=!baru2;}
-  const pl=$('plates');pl.innerHTML='';for(const [id,l] of [['kosong','Kosong'],['bawaan','Bawaan · AD 1481 YH'],['isi',cfg.plNo?`Isi sendiri · ${cfg.plNo}`:'Isi sendiri']]){const b=document.createElement('button');b.className='chip';b.textContent=l;b.setAttribute('aria-pressed',String(cfg.plate===id));
-    b.onclick=()=>{cfg.plate=id;save();applyPlate();renderTema();};pl.appendChild(b);}
-  $('plateEdit').hidden=cfg.plate!=='isi';if(document.activeElement!==$('plNo'))$('plNo').value=cfg.plNo;if(document.activeElement!==$('plExp'))$('plExp').value=cfg.plExp;if(document.activeElement!==$('nama'))$('nama').value=cfg.nama;
-  $('tBeep').setAttribute('aria-pressed',String(cfg.beep));
-  $('tPerf').setAttribute('aria-pressed',String(cfg.perf));$('tHemat').setAttribute('aria-pressed',String(cfg.hemat));
+  const vn=call('getVersion');$('ver').textContent=vn?` versi ${vn}`:' versi pratinjau';
+  sw('tPlat',platOn());$('plateEdit').hidden=!platOn();
+  if(document.activeElement!==$('plNo'))$('plNo').value=cfg.plNo||PLAT_DEF[0];if(document.activeElement!==$('plExp'))$('plExp').value=cfg.plExp||PLAT_DEF[1];
+  if(document.activeElement!==$('nama'))$('nama').value=cfg.nama;$('namaPrev').textContent=`Sapaan: Assalamu'alaikum, ${cfg.nama||'Mas'}`;
+  sw('tBeep',cfg.beep);sw('tDoa',cfg.doaSuara);sw('tPerf',cfg.perf);sw('tHemat',cfg.hemat);sw('tGerak',cfg.wallMotion);sw('tPutar',cfg.turntable);sw('tFmt',cfg.fmt!=='12');
   const v=$('views');v.innerHTML='';for(const n of Object.keys(VIEWS)){const b=document.createElement('button');b.className='chip';b.textContent=n;b.onclick=()=>{goView(n);closePop();};v.appendChild(b);}
-  $('tLampu').setAttribute('aria-pressed',String(lightsOn()));$('tGerak').setAttribute('aria-pressed',String(cfg.wallMotion));$('tPutar').setAttribute('aria-pressed',String(cfg.turntable));
+  const fb=document.createElement('button');fb.className='chip aksi';fb.innerHTML='<svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Mode foto';
+  fb.onclick=()=>{closePop();app.classList.add('foto');$('dock').classList.remove('hide');toast('Mode foto: putar dan perbesar mobil');need();};v.appendChild(fb);
   const w=$('walls');w.innerHTML='';
-  for(const [id,l] of [['showroom','Showroom gelap'],['garasi','Garasi LED'],['terowongan','Terowongan cahaya'],['karbon','Karbon gelap'],['galeri','Dari galeri…']]){const b=document.createElement('button');b.className='chip';b.textContent=l;b.setAttribute('aria-pressed',String(cfg.wall===id));
-    b.onclick=()=>{if(id==='galeri'){if(bridge&&bridge.pickImage)call('pickImage');else $('filePick').click();return;}cfg.wall=id;save();applyWall();renderTema();};w.appendChild(b);}
+  for(const [id,l] of [['showroom','Showroom gelap'],['garasi','Garasi LED'],['terowongan','Terowongan cahaya'],['karbon','Karbon gelap'],['galeri','Dari galeri…']]){const b=document.createElement('button');b.className='wt';b.setAttribute('aria-pressed',String(cfg.wall===id));
+    if(id==='galeri'&&!cfg.wallData){const d=document.createElement('div');d.className='add';d.innerHTML='<svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>';b.appendChild(d);}else b.appendChild(wallThumb(id));
+    b.insertAdjacentHTML('beforeend',`<span>${l}</span>`);
+    b.onclick=()=>{if(id==='galeri'&&(!cfg.wallData||cfg.wall==='galeri')){if(bridge&&bridge.pickImage)call('pickImage');else $('filePick').click();return;}cfg.wall=id;save();applyWall();renderTema();};w.appendChild(b);}
   const a=$('accents');a.innerHTML='';
-  for(const [id,c] of Object.entries(ACC)){const b=document.createElement('button');b.className='chip';b.setAttribute('aria-pressed',String(cfg.accent===id));
-    b.innerHTML=`<span class="sw" style="background:${c[0]};box-shadow:0 0 10px ${c[0]}"></span>${id[0].toUpperCase()+id.slice(1)}`;b.onclick=()=>{cfg.accent=id;save();applyAccent();renderTema();};a.appendChild(b);}
-  document.querySelectorAll('[data-fmt]').forEach(b=>b.setAttribute('aria-pressed',String(cfg.fmt===b.dataset.fmt)));
+  for(const [id,c] of Object.entries(ACC)){const b=document.createElement('button');b.className='swatch';b.setAttribute('aria-pressed',String(cfg.accent===id));b.setAttribute('aria-label',`Aksen ${id}`);
+    b.innerHTML=`<i style="background:${c[0]};box-shadow:0 0 12px ${c[0]}"></i>`;b.onclick=()=>{cfg.accent=id;save();applyAccent();renderTema();};a.appendChild(b);}
   $('simKota').setAttribute('aria-pressed',String(st.lampuKota));$('simHujan').setAttribute('aria-pressed',String(st.rain));}
-let plT=0;function plateFromInput(){cfg.plNo=$('plNo').value.trim().toUpperCase().replace(/\s+/g,' ');cfg.plExp=$('plExp').value.trim();save();applyPlate();
-  const c=[...$('plates').children][2];if(c)c.textContent=cfg.plNo?`Isi sendiri · ${cfg.plNo}`:'Isi sendiri';}
+let plT=0;function plateFromInput(){cfg.plNo=$('plNo').value.trim().toUpperCase().replace(/\s+/g,' ');cfg.plExp=$('plExp').value.trim();cfg.plate='isi';save();applyPlate();}
 for(const id of['plNo','plExp']){$(id).addEventListener('input',()=>{clearTimeout(plT);plT=setTimeout(plateFromInput,500);});
   $(id).addEventListener('keydown',e=>{if(e.key==='Enter'){clearTimeout(plT);plateFromInput();e.target.blur();toast('Pelat disimpan');}});}
+$('tPlat').onclick=()=>{if(platOn())cfg.plate='kosong';else{cfg.plate='isi';if(!cfg.plNo){cfg.plNo=PLAT_DEF[0];cfg.plExp=PLAT_DEF[1];}}save();applyPlate();renderTema();};
 $('tBeep').onclick=()=>{cfg.beep=!cfg.beep;save();renderTema();};
-$('namaSave').onclick=()=>{cfg.nama=$('nama').value.trim()||'Mas';save();toast(`Nama sapaan: ${cfg.nama}`);};
+$('tDoa').onclick=()=>{cfg.doaSuara=!cfg.doaSuara;save();renderTema();};
+let namaT=0;$('nama').addEventListener('input',()=>{clearTimeout(namaT);namaT=setTimeout(()=>{cfg.nama=$('nama').value.trim()||'Mas';save();$('namaPrev').textContent=`Sapaan: Assalamu'alaikum, ${cfg.nama}`;},400);});
+$('nama').addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur();});
 $('tHemat').onclick=()=>{cfg.hemat=!cfg.hemat;save();applyHemat();renderTema();toast(cfg.hemat?'Mode grafis hemat aktif':'Mode grafis hemat mati');};
 $('tPerf').onclick=()=>{cfg.perf=!cfg.perf;save();updPerf();renderTema();};
 $('tReset').onclick=()=>confirmBox('Reset semua pengaturan?','Dock, wallpaper, warna, pelat, nama, dan trip kembali ke awal.',()=>{
   try{localStorage.removeItem('vario.cfg');}catch(e){}call('saveSettings','{}');location.reload();});
 $('bHome').onclick=()=>{if(bridge&&bridge.setHome)call('setHome');else{toast('Simulasi: membuka pengaturan Home');$('homeBanner').hidden=true;}};
-$('tLampu').onclick=()=>{toggleLights();renderTema();};
 $('tGerak').onclick=()=>{cfg.wallMotion=!cfg.wallMotion;save();renderTema();fxKick();};
 $('tPutar').onclick=()=>{cfg.turntable=!cfg.turntable;save();renderTema();need();};
-$('tFoto').onclick=()=>{closePop();app.classList.add('foto');$('dock').classList.remove('hide');toast('Mode foto: putar dan perbesar mobil');need();};
 $('fotoExit').onclick=()=>{app.classList.remove('foto');need();};
-document.querySelectorAll('[data-fmt]').forEach(b=>b.onclick=()=>{cfg.fmt=b.dataset.fmt;save();tickUI();renderTema();});
+$('tFmt').onclick=()=>{cfg.fmt=cfg.fmt==='12'?'24':'12';save();tickUI();renderTema();};
 // simulasi (browser)
 document.querySelectorAll('[data-sim]').forEach(b=>b.onclick=()=>{st.simGps=true;setSpeed(+b.dataset.sim);toast(`Simulasi ${b.dataset.sim} km/jam`);});
 $('simKota').onclick=()=>{window.vario.onEvent({type:'lampu',on:!st.lampuKota});applyLights();renderTema();};

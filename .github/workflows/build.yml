@@ -12,6 +12,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0   # perlu riwayat & tag untuk catatan rilis lengkap
 
       - name: Buka ZIP proyek (kalau diunggah sebagai ZIP)
         run: |
@@ -39,8 +41,12 @@ jobs:
           LUXIO_KEYSTORE_PASSWORD: ${{ secrets.LUXIO_KEYSTORE_PASSWORD }}
         run: gradle assembleRelease --no-daemon --stacktrace
 
-      - name: Catatan rilis dari pesan commit
-        run: git log -1 --pretty=%B | grep -v -E '^(Co-Authored-By|Claude-Session):' > catatan.txt
+      - name: Catatan rilis dari semua commit sejak rilis sebelumnya
+        run: |
+          PREV=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || true)
+          git log --reverse --pretty=format:'• %s%n%b%n' ${PREV:+$PREV..}HEAD \
+            | grep -v -E '^(Co-Authored-By|Claude-Session):' | cat -s > catatan.txt
+          cat catatan.txt
 
       - name: Beri nama APK
         run: cp app/build/outputs/apk/release/app-release.apk LauncherLuxio-${{ github.run_number }}.apk

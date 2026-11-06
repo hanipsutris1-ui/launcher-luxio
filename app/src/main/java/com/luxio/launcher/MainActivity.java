@@ -501,6 +501,10 @@ public class MainActivity extends Activity {
             if (!buka(pkg)) h.post(() -> Toast.makeText(MainActivity.this, "Aplikasi tidak terpasang", Toast.LENGTH_SHORT).show());
         }
 
+        /** Buka halaman info aplikasi Android (menu tekan lama di popup Aplikasi). */
+        @JavascriptInterface public void appInfo(String pkg) {
+            bukaIntent(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + pkg)));
+        }
         @JavascriptInterface public String getApps() {
             JSONArray out = new JSONArray();
             try {
