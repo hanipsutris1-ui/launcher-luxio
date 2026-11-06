@@ -36,7 +36,7 @@ const call=(fn,...a)=>{try{if(bridge&&typeof bridge[fn]==='function')return brid
 
 // ---------- pengaturan (tersimpan otomatis) ----------
 const DEF={hemat:false,beep:true,nama:'Mas',plate:'kosong',plNo:'',plExp:'',perf:false,lastLat:null,lastLon:null,lastKota:null,accent:'biru',fmt:'24',wall:'showroom',wallData:null,wallMotion:true,doaSuara:true,turntable:false,lights:null,trip:0,updLast:null,
-  dock:['nav','yt','tema','lampu','apps'],custom:{},recent:[],hidden:[],widget:{jam:true,adz:true,cu:true,loc:true}};
+  dock:['nav','yt','tema','lampu','apps'],custom:{},recent:[],hidden:[],widget:{jam:true,adz:true,cu:true,loc:true,hud:true},merk:'LUXIO VARIO'};
 let cfg={...DEF};
 try{const s=call('loadSettings')||localStorage.getItem('vario.cfg');if(s)cfg={...DEF,...JSON.parse(s)};}catch(e){}
 let saveT=0,saveWarned=false;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{const s=JSON.stringify(cfg);call('saveSettings',s);if(bridge&&bridge.saveSettings)return;
@@ -101,7 +101,7 @@ setInterval(()=>{const lock=(SIM&&st.simGps)||(st.gps&&performance.now()-(st.gps
 // ---------- halo & redup ----------
 function updHalo(){const a=ACC[cfg.accent]||ACC.biru;if(cfg.hemat){$('halo').style.background='none';return;}
   $('halo').style.background=`radial-gradient(42% 46% at 50% 52%,rgba(${a[1]},.26),rgba(${a[1]},0) 70%)`;}
-function updDim(){$('dim').style.opacity=st.lampuKota?.22:0;}
+function updDim(){$('dim').style.opacity=st.lampuKota?.22:0;app.classList.toggle('kota',!!st.lampuKota);}
 
 // ---------- wallpaper ----------
 let WALLS=null;
@@ -273,7 +273,7 @@ function openYT(){if(bridge||getApps().some(a=>a.pkg==='com.google.android.youtu
 // ---------- doa saat HU menyala ----------
 // doa: suara Mishary Rashid Alafasy (QS 43:13 bagian doa + 43:14), teks tampil selama suara berjalan
 let doaAudio=null,doaOn=false,carReady=false;
-function tutupDoa(){const d=$('doa');d.classList.add('off');doaOn=false;updPerf();const l2=$('loading');if(l2&&!carReady)l2.style.visibility='';}
+function tutupDoa(){const d=$('doa');d.classList.add('off');neonNyala();doaOn=false;updPerf();const l2=$('loading');if(l2&&!carReady)l2.style.visibility='';}
 $('doa').addEventListener('click',tutupDoa);   // ketuk kartu = sembunyikan; suara tartil tetap jalan
 function doaBar(ms){const b=$('doaWkt');b.style.transition='none';b.style.transform='scaleX(1)';b.offsetWidth;b.style.transition=`transform ${ms}ms linear`;b.style.transform='scaleX(0)';}
 async function showDoa(){const d=$('doa');$('salam').textContent=`Assalamu'alaikum, ${cfg.nama||'Mas'}`;
@@ -451,8 +451,16 @@ renderer.setAnimationLoop(loop);
 document.querySelectorAll('.tabs [data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs [data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
   document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==b.dataset.tab);});
 const sw=(id,on)=>$(id).setAttribute('aria-checked',String(!!on));
-const WG={jam:['wJam','noJam'],adz:['wAdz','noAdz'],cu:['wCu','noCu'],loc:['wLoc','noLoc']};
-function applyWidget(){cfg.widget={jam:true,adz:true,cu:true,loc:true,...cfg.widget};for(const [k,[,c]] of Object.entries(WG))app.classList.toggle(c,!cfg.widget[k]);}
+const WG={jam:['wJam','noJam'],adz:['wAdz','noAdz'],cu:['wCu','noCu'],loc:['wLoc','noLoc'],hud:['wHud','noHud']};
+function applyWidget(){cfg.widget={jam:true,adz:true,cu:true,loc:true,hud:true,...cfg.widget};for(const [k,[,c]] of Object.entries(WG))app.classList.toggle(c,!cfg.widget[k]);}
+// tulisan neon: satu baris, huruf mengecil bila teks panjang (lebar maks 760px), tetap di tengah
+function applyMerk(){const t=(cfg.merk||'').trim(),m=$('merk'),b=$('merkT');m.hidden=!t;if(!t)return;b.textContent=t;
+  b.style.fontSize='46px';b.style.letterSpacing='.45em';b.style.paddingLeft='.45em';const w=b.scrollWidth;
+  if(w>760){const ls=Math.max(.12,.45*760/w);b.style.letterSpacing=b.style.paddingLeft=ls+'em';const w2=b.scrollWidth,fs=Math.max(22,46*Math.min(1,760/w2));b.style.fontSize=fs+'px';}
+  const fs=parseFloat(b.style.fontSize);m.style.top=(150+(46-fs)/2)+'px';}
+function neonNyala(){const m=$('merk');m.classList.remove('nyala');void m.offsetWidth;m.classList.add('nyala');}
+let merkT=0;$('merkIn').addEventListener('input',e=>{cfg.merk=e.target.value.toUpperCase();applyMerk();clearTimeout(merkT);merkT=setTimeout(save,400);});
+$('merkIn').addEventListener('keydown',e=>{if(e.key==='Enter')e.target.blur();});
 for(const [k,[id]] of Object.entries(WG))$(id).onclick=()=>{cfg.widget={...cfg.widget,[k]:!cfg.widget[k]};save();applyWidget();renderTema();};
 applyWidget();
 const PLAT_DEF=['AD 1481 YH','06.07'];
@@ -471,7 +479,7 @@ function renderTema(){
   sw('tPlat',platOn());$('plateEdit').hidden=!platOn();
   if(document.activeElement!==$('plNo'))$('plNo').value=cfg.plNo||PLAT_DEF[0];if(document.activeElement!==$('plExp'))$('plExp').value=cfg.plExp||PLAT_DEF[1];
   if(document.activeElement!==$('nama'))$('nama').value=cfg.nama;$('namaPrev').textContent=`Sapaan: Assalamu'alaikum, ${cfg.nama||'Mas'}`;
-  sw('tBeep',cfg.beep);sw('tDoa',cfg.doaSuara);sw('tPerf',cfg.perf);sw('tHemat',cfg.hemat);sw('tGerak',cfg.wallMotion);sw('tPutar',cfg.turntable);sw('tFmt',cfg.fmt!=='12');for(const [k,[id]] of Object.entries(WG))sw(id,cfg.widget[k]!==false);
+  sw('tBeep',cfg.beep);sw('tDoa',cfg.doaSuara);sw('tPerf',cfg.perf);sw('tHemat',cfg.hemat);sw('tGerak',cfg.wallMotion);sw('tPutar',cfg.turntable);sw('tFmt',cfg.fmt!=='12');if(document.activeElement!==$('merkIn'))$('merkIn').value=cfg.merk||'';for(const [k,[id]] of Object.entries(WG))sw(id,cfg.widget[k]!==false);
   const v=$('views');v.innerHTML='';for(const n of Object.keys(VIEWS)){const b=document.createElement('button');b.className='chip';b.textContent=n;b.onclick=()=>{goView(n);closePop();};v.appendChild(b);}
   const fb=document.createElement('button');fb.className='chip aksi';fb.innerHTML='<svg viewBox="0 0 24 24"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Mode foto';
   fb.onclick=()=>{closePop();app.classList.add('foto');$('dock').classList.remove('hide');toast('Mode foto: putar dan perbesar mobil');need();};v.appendChild(fb);
@@ -554,5 +562,5 @@ window.tampilDoa=()=>showDoa();
   st.lampuKota=cfg.lampuKota!=null?cfg.lampuKota:(h>=t.Maghrib||h<t.Subuh);}   // sebelum siaran OUT_DARK datang
 {const v=call('getVersion');if(v)$('ver').textContent='versi '+v;}
 {const hd=call('isDefaultHome');if(hd===false)$('homeBanner').hidden=false;}
-applyAccent();if(cfg.wall==='neon'){cfg.wall='showroom';save();}applyWall();renderDock();updDim();updPerf();tickUI();showDoa();
+document.fonts.ready.then(applyMerk);applyMerk();applyAccent();if(cfg.wall==='neon'){cfg.wall='showroom';save();}applyWall();renderDock();updDim();updPerf();tickUI();showDoa();
 document.fonts&&document.fonts.ready.then(()=>{hudDirty=true;need();});

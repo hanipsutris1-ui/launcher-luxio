@@ -194,9 +194,20 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 /* dock: slot yang bisa diganti berkedip */
 #dock button.pilih{animation:kedip 1s ease-in-out infinite;box-shadow:inset 0 0 0 2px rgba(var(--acc-rgb),.7)}
 @keyframes kedip{50%{background:rgba(var(--acc-rgb),.18)}}
+/* tulisan neon di atas mobil */
+#merk{position:absolute;left:0;right:0;top:150px;text-align:center;pointer-events:none;transition:opacity .8s}
+#merk[hidden]{display:none}
+#merk b{display:inline-block;font-size:46px;font-weight:800;letter-spacing:.45em;padding-left:.45em;text-transform:uppercase;white-space:nowrap;color:#fff;
+  text-shadow:0 0 3px #fff,0 0 9px var(--acc),0 0 20px var(--acc),0 0 42px rgba(var(--acc-rgb),.85),0 0 80px rgba(var(--acc-rgb),.5)}
+#merk.nyala b{animation:neonOn 1.6s linear both}
+@keyframes neonOn{0%{opacity:.08}8%{opacity:1}11%{opacity:.15}20%{opacity:1}23%{opacity:.3}30%,100%{opacity:1}}
+#app.kota #merk{opacity:.75}
+#app.jalan #merk{opacity:.15}
+#app.noHud #hud{display:none}
 </style></head><body>
 <div id="stage"><div id="app">
   <div id="bg"></div><div id="wallfx-wrap"><canvas id="wallfx" width="1280" height="800"></canvas></div><div id="halo"></div>
+  <div id="merk" class="ui" aria-hidden="true"><b id="merkT">LUXIO VARIO</b></div>
   <canvas id="gl" aria-label="Mobil Luxio VARIO 3D. Geser untuk memutar, ketuk dua kali untuk kembali. Ketuk lampu mobil untuk menyalakan lampu."></canvas>
   <canvas id="hud" width="512" height="256" class="ui" aria-label="Kecepatan dan trip. Tekan lama untuk reset trip."></canvas>
   <div id="loading">Memuat mobil…</div>
@@ -254,7 +265,9 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
         <button class="swr" id="wAdz" role="switch"><span>Waktu adzan<small>Cincin hitung mundur sholat berikutnya</small></span><i></i></button>
         <button class="swr" id="wCu" role="switch"><span>Cuaca<small>Suhu &amp; keadaan dari BMKG</small></span><i></i></button>
         <button class="swr" id="wLoc" role="switch"><span>Lokasi GPS<small>Kecamatan &amp; kabupaten, kiri atas</small></span><i></i></button>
+        <button class="swr" id="wHud" role="switch"><span>Kecepatan &amp; trip<small>Angka di lantai kiri bawah</small></span><i></i></button>
         <button class="swr" id="tFmt" role="switch"><span>Format 24 jam<small>Mati = 12 jam (AM/PM)</small></span><i></i></button></div>
+      <h3>Tulisan neon</h3><div class="row inrow" style="margin-top:0"><label>Teks di atas mobil<input id="merkIn" maxlength="20" autocomplete="off" placeholder="Kosongkan untuk menyembunyikan" style="width:420px;text-transform:uppercase"></label></div>
     </section>
     <section data-pane="mobil" hidden>
       <h3>Sudut kamera</h3><div class="row" id="views"></div>
