@@ -812,7 +812,6 @@ public class MainActivity extends Activity {
             } catch (Exception e) { return null; }
         }
 
-        @JavascriptInterface public void clearCache() { h.post(() -> { web.clearCache(true); web.reload(); }); }
         @JavascriptInterface public boolean isDefaultHome() { return jadiHome(); }
         @JavascriptInterface public void setHome() { bukaIntent(new Intent(Settings.ACTION_HOME_SETTINGS)); }
         @JavascriptInterface public String getVersion() {

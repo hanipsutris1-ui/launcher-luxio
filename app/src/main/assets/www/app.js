@@ -2,15 +2,14 @@
 //
 // Kontrak bridge Android (semua opsional; tanpa bridge berjalan dalam mode simulasi):
 //   VarioBridge.openApp(pkg)                 buka aplikasi layar penuh
-//   VarioBridge.openSplit(pkg) -> bool       buka aplikasi di separuh kanan (split-screen), false bila ROM tidak mendukung
-//   VarioBridge.showWebPanel(url,x,y,w,h)    tampilkan WebView native di area kanan (YouTube web); hideWebPanel()
+//   (Panel kanan — split-screen + panel web — DIHAPUS atas keputusan pemilik:
+//    split terbukti ditolak ROM HU ini. Waze/YouTube dibuka layar penuh via openApp.)
 //   VarioBridge.getApps() -> JSON [{label,pkg,icon}]   (icon = data URI PNG)
 //   VarioBridge.mediaControl(cmd)            'play' | 'pause' | 'next' | 'prev'  (MediaSession aplikasi aktif)
 //   VarioBridge.pickImage()                  buka galeri, hasil dikirim lewat event {type:'wallpaper', data}
 //   VarioBridge.saveSettings(json) / loadSettings() -> json
 //   VarioBridge.duckMusic(bool)              kecilkan musik selama suara doa diputar
 //   VarioBridge.getMemInfo() -> {"appMB":n}  RAM yang dipakai launcher
-//   VarioBridge.clearCache()                 hapus cache WebView launcher sendiri lalu muat ulang
 //   VarioBridge.isDefaultHome() -> bool / setHome()   cek & buka pengaturan Home bawaan
 //   VarioBridge.getVersion() -> "1.x.y"   getVersionCode() -> n   bukaUri(url)
 //   VarioBridge.ready()                      mobil siap tampil (lepas gambar instan)   alive() detak jantung
@@ -23,7 +22,6 @@
 //   {type:'place', kecamatan, kabupaten, kota, provinsi}
 //   {type:'lampu', on}                       broadcast lampu kota (OUT_DARK_START/STOP)
 //   {type:'weather', temp, desc, rain}
-//   {type:'media', active, izin, app, pkg, title, artist, pos, dur /*ms*/, playing, art, bt}
 //   {type:'nav', active}                     navigasi Waze sedang berjalan
 //   {type:'wallpaper', data}                 data URI gambar dari galeri
 import * as THREE from 'three';
@@ -38,7 +36,7 @@ const SIM=!bridge;
 const call=(fn,...a)=>{try{if(bridge&&typeof bridge[fn]==='function')return bridge[fn](...a);}catch(e){console.warn(fn,e);}return undefined;};
 
 // ---------- pengaturan (tersimpan otomatis) ----------
-const DEF={hemat:false,beep:true,nama:'Mas',plate:'kosong',plNo:'',plExp:'',perf:false,lastLat:null,lastLon:null,lastKota:null,accent:'biru',fmt:'24',wall:'showroom',wallData:null,wallMotion:true,doaSuara:true,turntable:false,lights:null,trip:0,
+const DEF={hemat:false,beep:true,nama:'Mas',plate:'kosong',plNo:'',plExp:'',perf:false,lastLat:null,lastLon:null,lastKota:null,accent:'biru',fmt:'24',wall:'showroom',wallData:null,wallMotion:true,doaSuara:true,turntable:false,lights:null,trip:0,updLast:null,
   dock:['nav','yt','tema','lampu','apps'],custom:{},recent:[]};
 let cfg={...DEF};
 try{const s=call('loadSettings')||localStorage.getItem('vario.cfg');if(s)cfg={...DEF,...JSON.parse(s)};}catch(e){}
@@ -78,14 +76,6 @@ function nextPrayer(now){const h=now.getHours()+now.getMinutes()/60+now.getSecon
 const pad=n=>String(n).padStart(2,'0');
 function fmtClock(H,M){if(cfg.fmt==='12'){const ap=H<12?'AM':'PM';return `${(H%12)||12}:${pad(M)}<small>${ap}</small>`;}return `${pad(H)}:${pad(M)}`;}
 const hm=h=>{h=fixh(h);const m=Math.round(h*60)%1440;return fmtClock(Math.floor(m/60),m%60).replace(/<small>(.*)<\/small>/,' $1');};
-// kalender Hijriah (aritmetika; bisa selisih ±1 hari dari ketetapan Kemenag)
-const HBLN=['Muharram','Safar','Rabiul Awal','Rabiul Akhir','Jumadil Awal','Jumadil Akhir','Rajab',"Sya'ban",'Ramadhan','Syawal',"Dzulqa'dah",'Dzulhijjah'];
-function hijri(d){let y=d.getFullYear(),m=d.getMonth()+1;const day=d.getDate();if(m<3){y--;m+=12;}const a=Math.floor(y/100),b=2-a+Math.floor(a/4);
-  const jd=Math.floor(365.25*(y+4716))+Math.floor(30.6001*(m+1))+day+b-1524;let l=jd-1948440+10632;const n=Math.floor((l-1)/10631);l=l-10631*n+354;
-  const j=Math.floor((10985-l)/5316)*Math.floor(50*l/17719)+Math.floor(l/5670)*Math.floor(43*l/15238);
-  l=l-Math.floor((30-j)/15)*Math.floor(17719*j/50)-Math.floor(j/16)*Math.floor(15238*j/43)+29;const hm_=Math.floor(24*l/709),hd=l-Math.floor(709*hm_/24),hy=30*n+j-30;
-  return `${hd} ${HBLN[hm_-1]} ${hy} H`;}
-
 // ---------- teks UI ----------
 const HARI=['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'],BLN=['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
 let magrib=false;
@@ -93,7 +83,6 @@ function tickUI(){
   const now=new Date();
   $('jam').innerHTML=fmtClock(now.getHours(),now.getMinutes());
   $('tgl').textContent=`${HARI[now.getDay()]}, ${now.getDate()} ${BLN[now.getMonth()]} ${now.getFullYear()}`;
-  $('hij').textContent=hijri(now);
   const np=nextPrayer(now);$('pName').textContent=np.name;$('pTime').textContent=hm(np.at);
   const lm=Math.max(0,Math.round(np.left*60));$('cd').textContent=lm>=60?`${Math.floor(lm/60)} jam ${lm%60} mnt lagi`:`${lm} mnt lagi`;
   const soon=lm<=10;$('jam').classList.toggle('pulse',soon);$('adz').classList.toggle('pulse',soon);
@@ -109,14 +98,14 @@ setInterval(()=>{const lock=(SIM&&st.simGps)||(st.gps&&performance.now()-(st.gps
 // ---------- halo & redup ----------
 function updHalo(){const a=ACC[cfg.accent]||ACC.biru;if(cfg.hemat){$('halo').style.background='none';return;}
   $('halo').style.background=magrib
-    ?'radial-gradient(46% 50% at 31% 52%,rgba(190,90,200,.30),rgba(255,140,80,.10) 55%,rgba(0,0,0,0) 75%)'
-    :`radial-gradient(42% 46% at 31% 52%,rgba(${a[1]},.26),rgba(${a[1]},0) 70%)`;}
+    ?'radial-gradient(46% 50% at 50% 52%,rgba(190,90,200,.30),rgba(255,140,80,.10) 55%,rgba(0,0,0,0) 75%)'
+    :`radial-gradient(42% 46% at 50% 52%,rgba(${a[1]},.26),rgba(${a[1]},0) 70%)`;}
 function updDim(){$('dim').style.opacity=st.lampuKota?.22:0;}
 
 // ---------- wallpaper ----------
 let WALLS=null;
 async function applyWall(){const bg=$('bg');const fx=FX[cfg.wall];$('wallfx-wrap').classList.toggle('on',!!fx);if(fx){bg.style.background='#05070a';fxInit(cfg.wall);return;}
-  if(cfg.wall==='showroom'){bg.style.backgroundImage='';bg.style.background='radial-gradient(90% 80% at 32% 58%,#2a3442 0%,#121820 50%,#07090c 100%)';return;}
+  if(cfg.wall==='showroom'){bg.style.backgroundImage='';bg.style.background='radial-gradient(90% 80% at 50% 58%,#2a3442 0%,#121820 50%,#07090c 100%)';return;}
   let url=null;if(cfg.wall==='galeri')url=cfg.wallData;else{if(!WALLS)WALLS=(await import('./walls.js')).default;url=WALLS[cfg.wall];}
   if(url){bg.style.background=`#07090c url("${url}") center/cover no-repeat`;}}
 function setGaleri(data){const im=new Image();im.onload=()=>{const c=document.createElement('canvas');c.width=1280;c.height=800;const g=c.getContext('2d');
@@ -126,7 +115,7 @@ $('filePick').addEventListener('change',e=>{const f=e.target.files[0];if(!f)retu
 
 
 // ---------- wallpaper hidup (kanvas 2D, maks 20 FPS) ----------
-const wc=$('wallfx'),wg=wc.getContext('2d');const VP={x:410,y:400};
+const wc=$('wallfx'),wg=wc.getContext('2d');const VP={x:640,y:400};
 const FX={garasi:1,terowongan:1,karbon:1};let fxName=null,fxRun=false,fxT=0,fxLast=0,parkedSince=performance.now();
 let carbonPat=null,streaksT=[];
 function accRGB(){return (ACC[cfg.accent]||ACC.biru)[1];}
@@ -177,9 +166,6 @@ window.vario={onEvent(e){
   else if(e.type==='lampu'){st.lampuKota=!!e.on;cfg.lampuKota=st.lampuKota;cfg.lights=null;save();updDim();applyLights&&applyLights();need();}
   else if(e.type==='home'){$('homeBanner').hidden=!!e.isDefault;}
   else if(e.type==='weather'){st.temp=e.temp;st.wx=e.desc||'';st.wxSrc=e.src||'';st.rain=!!e.rain||/hujan/i.test(e.desc||'');need();}
-  else if(e.type==='media'){$('media').classList.toggle('noizin',e.izin===false);setMedia(e.active===false?null:e);}
-  else if(e.type==='panel'){st.ytOpen=!!e.open;$('slot').classList.toggle('yt',st.ytOpen);}
-  else if(e.type==='split'){st.splitOk=!!e.ok;}
   else if(e.type==='nav'){if(e.active&&!st.nav)openWaze(true);st.nav=!!e.active;}
   else if(e.type==='settings'){imporCfg(e.data||'');}
   else if(e.type==='wallpaper'){if(e.data)setGaleri(e.data);}
@@ -256,51 +242,26 @@ function showPick(){const g=$('pickGrid');g.innerHTML='';
   [...base,...getApps()].forEach(a=>g.appendChild(appTile(a,()=>{closePop();if(DOCK[a.pkg]){cfg.dock[pickSlot]=a.pkg;save();renderDock();}else placeApp(pickSlot,a.pkg);})));
   openPop('popPick');}
 
-// ---------- area kanan: Waze (split-screen) & YouTube (panel web) ----------
-function slotRect(){const r=$('slot').getBoundingClientRect();return [r.left,r.top,r.width,r.height].map(Math.round);}
-function showPanel(t,d){$('panelT').textContent=t;$('panelD').textContent=d;$('panel').classList.add('on');}
-$('panelX').addEventListener('click',()=>{$('panel').classList.remove('on');call('hideWebPanel');});
-function openWaze(auto){if(st.ytOpen)call('hideWebPanel');const ok=call('openSplit','com.waze');
-  if(ok===true)return;if(bridge){openApp('com.waze','Waze');return;}
-  showPanel('Waze',auto?'Navigasi aktif. Di HU, Waze tampil di sisi kanan lewat split-screen (bila ROM mendukung).':'Di HU, Waze dibuka di sisi kanan lewat split-screen. Bila ROM tidak mendukung, Waze dibuka layar penuh.');}
-function openYT(){if(bridge&&bridge.showWebPanel){if(st.ytOpen){call('hideWebPanel');return;}call('showWebPanel','https://m.youtube.com',...slotRect());return;}
-  showPanel('YouTube','Di HU, YouTube versi web tampil di kotak ini (butuh internet).');}
-$('bWaze').addEventListener('click',()=>openWaze());$('bYT').addEventListener('click',()=>openYT());
+// ---------- Waze & YouTube: buka layar penuh biasa ----------
+// Panel kanan (kotak sisi + panel web + split-screen) dihapus atas keputusan pemilik:
+// split terbukti ditolak ROM ini dan panel webnya lebih banyak ribetnya daripada gunanya.
+// Dock tetap menyediakan kedua aplikasi ini sebagai ikon layar penuh.
+function openWaze(){openApp('com.waze','Waze');}
+function openYT(){if(bridge||getApps().some(a=>a.pkg==='com.google.android.youtube'))openApp('com.google.android.youtube','YouTube');else toast('YouTube tidak terpasang');}
 
-// ---------- media universal (MediaSession) ----------
-const SRC={spotify:['Spotify','com.spotify.music'],radio:['Radio','com.navimods.radio_free'],musik:['Musik','com.tw.music']};
-document.querySelectorAll('.srcs button,.srcmini button').forEach(b=>b.addEventListener('click',()=>{const [l,p]=SRC[b.dataset.src];openApp(p,l);if(SIM)setMedia({app:l,title:'Contoh lagu',artist:'Nama artis',pos:84000,dur:221000,playing:true});}));
-const fmtT=ms=>{const s=Math.max(0,Math.round(ms/1000));return `${Math.floor(s/60)}:${pad(s%60)}`;};
-const PP={play:'<path d="M8 5v14l11-7z"/>',pause:'<path d="M9 6v12M15 6v12"/>'};
-function setMedia(m){const was=st.media&&st.media.playing;st.media=m?{...st.media,...m,t0:performance.now()}:null;
-  if(st.media&&!st.media.playing&&(was||!st.media.pauseAt))st.media.pauseAt=Date.now();if(st.media&&st.media.playing)st.media.pauseAt=0;
-  mediaFace();if(!m)return;
-  const x=st.media;$('judul').textContent=x.title||'—';$('artis').textContent=x.artist||'';
-  $('msrc').textContent=x.bt?`Bluetooth · ${x.bt}`:(x.app||'Musik');
-  $('cover').innerHTML=x.art?`<img src="${x.art}" alt="">`:'<svg class="ic" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>';
-  $('ppIc').innerHTML=x.playing?PP.pause:PP.play;updProg();}
-function mediaFace(){const x=st.media,idle=!x||(!x.playing&&x.pauseAt&&Date.now()-x.pauseAt>300000);$('media').classList.toggle('kosong',!!idle);}
-function updProg(){mediaFace();const x=st.media;if(!x)return;let pos=x.pos||0;if(x.playing)pos+=performance.now()-x.t0;if(x.dur)pos=Math.min(pos,x.dur);
-  $('prog').style.width=x.dur?`${pos/x.dur*100}%`:'0';$('tPos').textContent=fmtT(pos);$('tDur').textContent=x.dur?fmtT(x.dur):'';}
-setInterval(updProg,1000);
-function mctl(c){call('mediaControl',c);if(SIM&&st.media){if(c==='play'||c==='pause')setMedia({pos:(st.media.pos||0)+(st.media.playing?performance.now()-st.media.t0:0),playing:c==='play'});else toast(c==='next'?'Lagu berikutnya':'Lagu sebelumnya');}}
-$('mPP').addEventListener('click',()=>mctl(st.media&&st.media.playing?'pause':'play'));
-$('mPrev').addEventListener('click',()=>mctl('prev'));$('mNext').addEventListener('click',()=>mctl('next'));
-// Panel media tanpa izin akses notifikasi: wajah petunjuk. Ketuk -> Android membuka
-// pengaturan Akses Notifikasi (mediaControl tanpa sesi + tanpa izin memang ke sana).
-$('mIzin').addEventListener('click',()=>{if(bridge)call('mediaControl','play');else toast('Simulasi: membuka pengaturan akses notifikasi');});
-(()=>{let x0=null;const el=$('media');el.addEventListener('pointerdown',e=>{x0=e.clientX;});
-  el.addEventListener('pointerup',e=>{if(x0==null||!st.media)return;const s=+app.dataset.scale||1,dx=(e.clientX-x0)/s;x0=null;if(Math.abs(dx)>70)mctl(dx<0?'next':'prev');});})();
+// ---------- media: panel media DIHAPUS (keputusan pemilik: tampilan kosong bersih) ----------
+// Sesi media tidak lagi ditampilkan di layar utama; event media dari Java diabaikan.
+// Kendali lagu lewat aplikasi sumbernya atau tombol setir.
 
 // ---------- doa saat HU menyala ----------
 // doa: suara Mishary Rashid Alafasy (QS 43:13 bagian doa + 43:14), teks tampil selama suara berjalan
-let doaAudio=null,doaOn=false;
-async function showDoa(){const d=$('doa');$('salam').textContent=`Assalamu'alaikum, ${cfg.nama||'Mas'}`;d.classList.remove('off');doaOn=true;updPerf();let ms=12000;
+let doaAudio=null,doaOn=false,carReady=false;
+async function showDoa(){const d=$('doa');$('salam').textContent=`Assalamu'alaikum, ${cfg.nama||'Mas'}`;d.classList.remove('off');doaOn=true;updPerf();const ld=$('loading');if(ld&&!carReady)ld.style.visibility='hidden';let ms=12000;
   {try{const src=(await import('./doa.js')).default;doaAudio=new Audio(src);doaAudio.volume=0.9;
       call('duckMusic',true);   // Android: kecilkan musik selama doa (audio focus)
       await doaAudio.play();ms=Math.max(ms,(doaAudio.duration||19.5)*1000+800);
       doaAudio.addEventListener('ended',()=>call('duckMusic',false),{once:true});}catch(e){call('duckMusic',false);}}
-  setTimeout(()=>{d.classList.add('off');doaOn=false;updPerf();},ms);}
+  setTimeout(()=>{d.classList.add('off');doaOn=false;updPerf();const l2=$('loading');if(l2&&!carReady)l2.style.visibility='';},ms);}
 
 // ---------- 3D ----------
 const canvas=$('gl');
@@ -314,13 +275,13 @@ const key=new THREE.SpotLight(0xffffff,120,30,0.6,0.7,1.2);key.position.set(2,7,
 const rim=new THREE.SpotLight(0x7fb6ff,70,30,0.5,0.8,1.2);rim.position.set(-5,4,-5);scene.add(rim);
 const camera=new THREE.PerspectiveCamera(30,1280/800,0.1,100);
 let appH=800;
-function sizeGL(){appH=+app.dataset.h||800;renderer.setSize(1280,appH,false);camera.aspect=1280/appH;camera.setViewOffset(1280,appH,235,-50*appH/800,1280,appH);camera.updateProjectionMatrix();}
+function sizeGL(){appH=+app.dataset.h||800;renderer.setSize(1280,appH,false);camera.aspect=1280/appH;camera.setViewOffset(1280,appH,0,-50*appH/800,1280,appH);camera.updateProjectionMatrix();}
 addEventListener('appresize',()=>{sizeGL();need();});
-const HOME=[6.9,2.3,7.5],TGT=[0,0.8,0];camera.position.set(...HOME);sizeGL();
+const HOME=[5.5,2.0,6.0],TGT=[0,0.8,0];camera.position.set(...HOME);sizeGL();
 const controls=new OrbitControls(camera,canvas);controls.target.set(...TGT);
 controls.enableDamping=true;controls.enablePan=false;controls.minDistance=5;controls.maxDistance=14;controls.maxPolarAngle=Math.PI*0.47;controls.rotateSpeed=0.6;controls.autoRotateSpeed=0.8;
 controls.update();controls.addEventListener('change',need);
-const VIEWS={Awal:[HOME,TGT],Depan:[[0.6,1.7,9.2],[0,0.8,0]],Belakang:[[-0.6,1.9,-9.2],[0,0.8,0]],Kiri:[[9.2,1.6,0.2],[0,0.8,0]],Kanan:[[-9.2,1.6,0.2],[0,0.8,0]],Atas:[[0.01,11,0.6],[0,0,0.6]]};
+const VIEWS={'Serong Kiri':[HOME,TGT],'Serong Kanan':[[-5.5,2.0,6.0],TGT],Depan:[[0.6,1.7,9.2],[0,0.8,0]],Belakang:[[-0.6,1.9,-9.2],[0,0.8,0]],Kiri:[[9.2,1.6,0.2],[0,0.8,0]],Kanan:[[-9.2,1.6,0.2],[0,0.8,0]],Atas:[[0.01,11,0.6],[0,0,0.6]]};
 let tween=null;
 function goView(n){const [p,t]=VIEWS[n];tween={k:0,p0:camera.position.clone(),p1:new THREE.Vector3(...p),t0:controls.target.clone(),t1:new THREE.Vector3(...t)};need();}
 
@@ -366,9 +327,9 @@ async function loadCar(){let buf=null;
   refl=car.clone(true);refl.scale.y=-1;
   refl.traverse(o=>{if(o.isMesh){const m=o.material.clone();fadeRefl(m);o.material=m;if(m.name.startsWith('lampu'))lampMats.push(m);if(m.name==='pelat')plateMats.push(m);}});
   applyPlate();
-  scene.add(car,refl);$('loading').remove();applyHemat();showDoa();applyLights();await renderer.compileAsync(scene,camera);need();
+  scene.add(car,refl);carReady=true;$('loading').remove();applyHemat();applyLights();await renderer.compileAsync(scene,camera);need();
   requestAnimationFrame(()=>requestAnimationFrame(()=>call('ready')));}   // Android: lepas gambar instan
-loadCar().catch(e=>{$('loading').textContent='Model gagal dimuat';console.error(e);});
+loadCar().catch(e=>{const d=$('doa');if(d){d.classList.add('off');doaOn=false;}const ld=$('loading');if(ld){ld.style.visibility='';ld.textContent='Model gagal dimuat';}console.error(e);});
 
 // lampu
 function lightsOn(){return cfg.lights!=null?cfg.lights:st.lampuKota;}
@@ -410,7 +371,7 @@ canvas.addEventListener('pointerdown',e=>{downAt=performance.now();dx0=e.clientX
   });
 canvas.addEventListener('pointermove',e=>{if(Math.hypot(e.clientX-dx0,e.clientY-dy0)>10)clearTimeout(holdT);});
 canvas.addEventListener('pointerup',e=>{clearTimeout(holdT);if(app.classList.contains('foto'))return;const moved=Math.hypot(e.clientX-dx0,e.clientY-dy0)>10;if(moved||performance.now()-downAt>400)return;
-  const now=performance.now();if(now-lastTap<320){goView('Awal');lastTap=0;return;}lastTap=now;
+  const now=performance.now();if(now-lastTap<320){goView('Serong Kiri');lastTap=0;return;}lastTap=now;
   if(!car)return;ray.setFromCamera(ndc(e),camera);const hit=ray.intersectObject(car,true)[0];
   if(hit&&hit.object.material&&hit.object.material.name.startsWith('lampu'))toggleLights();});
 
@@ -468,6 +429,7 @@ renderer.setAnimationLoop(loop);
 document.querySelectorAll('.tabs [data-tab]').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tabs [data-tab]').forEach(x=>x.setAttribute('aria-selected',String(x===b)));
   document.querySelectorAll('[data-pane]').forEach(p=>p.hidden=p.dataset.pane!==b.dataset.tab);});
 function renderTema(){
+  if(cfg.updLast&&!updInfo)updInfo=cfg.updLast;if(updInfo){const vc2=+(call('getVersionCode')||0);const baru2=vc2&&updInfo.n>vc2;$('updT').textContent=!vc2?`Terbaru di GitHub: ${updInfo.tag}`:(baru2?`Versi baru ${updInfo.tag} tersedia`:'Sudah versi terbaru');$('updNotes').hidden=!updInfo.notes;$('updNotes').textContent=updInfo.notes?`Catatan rilis ${updInfo.tag}:\n${updInfo.notes}`:'';$('tUpdGo').hidden=!baru2;}
   const pl=$('plates');pl.innerHTML='';for(const [id,l] of [['kosong','Kosong'],['bawaan','Bawaan · AD 1481 YH'],['isi',cfg.plNo?`Isi sendiri · ${cfg.plNo}`:'Isi sendiri']]){const b=document.createElement('button');b.className='chip';b.textContent=l;b.setAttribute('aria-pressed',String(cfg.plate===id));
     b.onclick=()=>{cfg.plate=id;save();applyPlate();renderTema();};pl.appendChild(b);}
   $('plateEdit').hidden=cfg.plate!=='isi';if(document.activeElement!==$('plNo'))$('plNo').value=cfg.plNo;if(document.activeElement!==$('plExp'))$('plExp').value=cfg.plExp;if(document.activeElement!==$('nama'))$('nama').value=cfg.nama;
@@ -476,7 +438,7 @@ function renderTema(){
   const v=$('views');v.innerHTML='';for(const n of Object.keys(VIEWS)){const b=document.createElement('button');b.className='chip';b.textContent=n;b.onclick=()=>{goView(n);closePop();};v.appendChild(b);}
   $('tLampu').setAttribute('aria-pressed',String(lightsOn()));$('tGerak').setAttribute('aria-pressed',String(cfg.wallMotion));$('tPutar').setAttribute('aria-pressed',String(cfg.turntable));
   const w=$('walls');w.innerHTML='';
-  for(const [id,l] of [['showroom','Showroom gelap'],['garasi','Garasi LED'],['terowongan','Terowongan cahaya'],['karbon','Karbon gelap'],['neon','Neon bay'],['galeri','Dari galeri…']]){const b=document.createElement('button');b.className='chip';b.textContent=l;b.setAttribute('aria-pressed',String(cfg.wall===id));
+  for(const [id,l] of [['showroom','Showroom gelap'],['garasi','Garasi LED'],['terowongan','Terowongan cahaya'],['karbon','Karbon gelap'],['galeri','Dari galeri…']]){const b=document.createElement('button');b.className='chip';b.textContent=l;b.setAttribute('aria-pressed',String(cfg.wall===id));
     b.onclick=()=>{if(id==='galeri'){if(bridge&&bridge.pickImage)call('pickImage');else $('filePick').click();return;}cfg.wall=id;save();applyWall();renderTema();};w.appendChild(b);}
   const a=$('accents');a.innerHTML='';
   for(const [id,c] of Object.entries(ACC)){const b=document.createElement('button');b.className='chip';b.setAttribute('aria-pressed',String(cfg.accent===id));
@@ -491,8 +453,6 @@ $('tBeep').onclick=()=>{cfg.beep=!cfg.beep;save();renderTema();};
 $('namaSave').onclick=()=>{cfg.nama=$('nama').value.trim()||'Mas';save();toast(`Nama sapaan: ${cfg.nama}`);};
 $('tHemat').onclick=()=>{cfg.hemat=!cfg.hemat;save();applyHemat();renderTema();toast(cfg.hemat?'Mode grafis hemat aktif':'Mode grafis hemat mati');};
 $('tPerf').onclick=()=>{cfg.perf=!cfg.perf;save();updPerf();renderTema();};
-$('tCache').onclick=()=>confirmBox('Bersihkan cache?','File sementara launcher dihapus lalu launcher dimuat ulang. Pengaturan tidak ikut terhapus.',async()=>{
-  if(bridge&&bridge.clearCache){call('clearCache');return;}try{if(window.caches)for(const k of await caches.keys())await caches.delete(k);}catch(e){}location.reload();});
 $('tReset').onclick=()=>confirmBox('Reset semua pengaturan?','Dock, wallpaper, warna, pelat, nama, dan trip kembali ke awal.',()=>{
   try{localStorage.removeItem('vario.cfg');}catch(e){}call('saveSettings','{}');location.reload();});
 $('bHome').onclick=()=>{if(bridge&&bridge.setHome)call('setHome');else{toast('Simulasi: membuka pengaturan Home');$('homeBanner').hidden=true;}};
@@ -507,7 +467,6 @@ document.querySelectorAll('[data-sim]').forEach(b=>b.onclick=()=>{st.simGps=true
 $('simKota').onclick=()=>{window.vario.onEvent({type:'lampu',on:!st.lampuKota});applyLights();renderTema();};
 $('simHujan').onclick=()=>{window.vario.onEvent({type:'weather',temp:st.temp??27,desc:st.rain?'Cerah':'Hujan ringan',rain:!st.rain});renderTema();};
 $('simBelok').onclick=()=>{st.turn=1;need();};
-$('simLagu').onclick=()=>{setMedia(st.media?null:{app:'Spotify',title:'Contoh lagu',artist:'Nama artis',pos:84000,dur:221000,playing:true});};
 $('simHome')&&($('simHome').onclick=()=>window.vario.onEvent({type:'home',isDefault:false}));
 $('simNav').onclick=()=>{closePop();window.vario.onEvent({type:'nav',active:true});};
 
@@ -521,7 +480,7 @@ async function cekUpdate(manual){const vc=+(call('getVersionCode')||0);
   if(manual)$('updT').textContent='Memeriksa…';
   try{const r=await fetch(`https://api.github.com/repos/${REPO}/releases/latest`,{cache:'no-store'});if(!r.ok)throw 0;const j=await r.json();
     const n=parseInt(String(j.tag_name||'').replace(/\D/g,''))||0;const apk=(j.assets||[]).find(a=>/\.apk$/i.test(a.name));
-    updInfo={n,tag:j.tag_name,url:apk?apk.browser_download_url:j.html_url,notes:(j.body||'').trim()};
+    updInfo={n,tag:j.tag_name,url:apk?apk.browser_download_url:j.html_url,notes:(j.body||'').trim()};cfg.updLast=updInfo;save();
     const baru=vc&&n>vc;
     $('updT').textContent=!vc?`Terbaru di GitHub: ${j.tag_name}`:(baru?`Versi baru ${j.tag_name} tersedia`:'Sudah versi terbaru');
     $('updNotes').hidden=!updInfo.notes;$('updNotes').textContent=updInfo.notes?`Catatan rilis ${j.tag_name}:\n${updInfo.notes}`:'';
@@ -549,12 +508,12 @@ $('tEks').onclick=eksporCfg;
 $('tImp').onclick=()=>{if(bridge&&bridge.importSettings)call('importSettings');else $('cfgPick').click();};
 $('cfgPick').addEventListener('change',e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>imporCfg(r.result);r.readAsText(f);e.target.value='';});
 // dipanggil Android: tombol Back dan layar menyala lagi
-window.kembali=()=>{if(document.querySelector('.pop.on')){closePop();return;}if(app.classList.contains('foto')){app.classList.remove('foto');need();return;}if(st.ytOpen){call('hideWebPanel');return;}if($('panel').classList.contains('on')){$('panelX').click();}};
+window.kembali=()=>{if(document.querySelector('.pop.on')){closePop();return;}if(app.classList.contains('foto')){app.classList.remove('foto');need();}};
 window.tampilDoa=()=>showDoa();
 // ---------- mulai ----------
 {const now=new Date(),h=now.getHours()+now.getMinutes()/60,t=prayerTimes(now,st.lat,st.lon,tzH);
   st.lampuKota=cfg.lampuKota!=null?cfg.lampuKota:(h>=t.Maghrib||h<t.Subuh);}   // sebelum siaran OUT_DARK datang
 {const v=call('getVersion');if(v)$('ver').textContent='versi '+v;}
 {const hd=call('isDefaultHome');if(hd===false)$('homeBanner').hidden=false;}
-applyAccent();applyWall();renderDock();updDim();updPerf();tickUI();
+applyAccent();if(cfg.wall==='neon'){cfg.wall='showroom';save();}applyWall();renderDock();updDim();updPerf();tickUI();showDoa();
 document.fonts&&document.fonts.ready.then(()=>{hudDirty=true;need();});

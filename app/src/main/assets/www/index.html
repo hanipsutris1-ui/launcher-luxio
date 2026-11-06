@@ -16,7 +16,7 @@ body{font-family:Overpass,system-ui,sans-serif;color:var(--ink);font-variant-num
 #stage{position:fixed;inset:0;overflow:hidden}
 #app{position:absolute;left:0;top:0;width:1280px;height:800px;transform-origin:0 0;overflow:hidden;background:#07090c}
 #bg{position:absolute;inset:0;background:radial-gradient(90% 80% at 32% 58%,#2a3442 0%,#121820 50%,#07090c 100%);background-size:cover;background-position:center;transition:opacity .6s}
-#hud{position:absolute;left:470px;bottom:125px;width:340px;height:170px;transform:perspective(520px) rotateX(48deg);transform-origin:50% 100%;touch-action:none}
+#hud{position:absolute;left:40px;bottom:118px;width:340px;height:170px;transform:perspective(520px) rotateX(48deg);transform-origin:50% 100%;touch-action:none}
 #wallfx-wrap{position:absolute;inset:0;display:none}#wallfx-wrap.on{display:block}#wallfx{width:1280px;height:800px}
 #halo{position:absolute;inset:0;pointer-events:none;transition:background 3s}
 #gl{position:absolute;left:0;top:0;width:1280px;height:100%;touch-action:none}
@@ -33,13 +33,13 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 #kec{font-size:26px;font-weight:700;line-height:1.15}
 #kab{font-size:16px;color:var(--dim);margin-top:4px}
 /* doa */
-#doa{position:absolute;left:320px;top:22px;width:490px;padding:10px 16px;border-left:2px solid var(--acc);
-  background:linear-gradient(90deg,rgba(var(--acc-rgb),.10),rgba(var(--acc-rgb),0));transition:opacity 1.2s}
-#doa .jd{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--acc);font-weight:700}
-#doa .lt{font-size:13.5px;color:var(--glow);line-height:1.45;margin-top:4px}
-#doa .ar{font-size:21px;line-height:1.6;margin-top:2px;font-family:"Noto Naskh Arabic","Amiri",serif;text-align:right}
-#doa .tr{font-size:13px;color:var(--dim);line-height:1.45;margin-top:4px}
-#doa .src{font-size:13px;color:var(--acc);margin-top:6px;font-weight:600}
+#doa{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:600px;padding:20px 26px;border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:18px;
+  background:rgba(7,11,17,.86);backdrop-filter:blur(12px);transition:opacity 1.2s}
+#doa .jd{font-size:14.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--acc);font-weight:700}
+#doa .lt{font-size:16.5px;color:var(--glow);line-height:1.45;margin-top:4px}
+#doa .ar{font-size:28px;line-height:1.6;margin-top:2px;font-family:"Noto Naskh Arabic","Amiri",serif;text-align:right}
+#doa .tr{font-size:15.5px;color:var(--dim);line-height:1.45;margin-top:4px}
+#doa .src{font-size:14px;color:var(--acc);margin-top:6px;font-weight:600}
 #doa.off{opacity:0;pointer-events:none}
 /* jam & adzan */
 #status{position:absolute;right:40px;top:30px;display:flex;gap:28px;align-items:flex-start}
@@ -54,52 +54,11 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 #jam{font-size:68px;line-height:.95;letter-spacing:-1px}
 #jam small{font-size:22px;font-weight:700;margin-left:4px}
 #tgl{font-size:17px;color:var(--dim);margin-top:8px}
-#hij{font-size:15px;color:var(--dim);margin-top:2px}
 #jam.pulse,.adz.pulse b{animation:pulse 2.4s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.55}}
-/* area kanan untuk Waze / YouTube */
-#slot{position:absolute;right:40px;top:196px;width:400px;height:210px;display:flex;justify-content:center;gap:56px;align-items:center;border-radius:18px}
-#slot>button{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--glow);min-width:96px;min-height:96px;justify-content:center;border-radius:18px}
-#slot>button:active{transform:scale(.95)}
-#slot svg{width:44px;height:44px;stroke:var(--glow);fill:none;stroke-width:1.5;stroke-linejoin:round;filter:drop-shadow(0 0 8px rgba(var(--acc-rgb),.9))}
-#panel{position:absolute;inset:0;border-radius:18px;border:1px solid var(--line);background:rgba(10,14,20,.7);display:none;align-items:center;justify-content:center;flex-direction:column;gap:10px;text-align:center;font-size:16px;color:var(--dim);padding:20px}
-#panel.on{display:flex}
-#panel b{color:var(--ink);font-size:20px}
-#panel .x{position:absolute;right:8px;top:8px;width:44px;height:44px;font-size:22px;color:var(--ink)}
-/* media */
-#media{position:absolute;right:40px;bottom:140px;width:400px;touch-action:pan-y}
-.mus{display:flex;gap:18px;align-items:center}
-.cover{width:72px;height:72px;border-radius:50%;border:1.5px solid var(--acc);box-shadow:0 0 18px rgba(var(--acc-rgb),.35);display:grid;place-items:center;flex:none;overflow:hidden}
-.cover img{width:100%;height:100%;object-fit:cover}
-.cover svg{width:30px;height:30px}
-.srcchip{display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--acc);border:1px solid rgba(var(--acc-rgb),.45);border-radius:12px;padding:2px 10px 1px 8px;margin-bottom:6px;max-width:260px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#judul{font-size:24px;font-weight:700;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}
-#artis{font-size:17px;color:var(--dim);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:300px}
-.bar{height:4px;border-radius:2px;background:var(--line);margin:18px 0 6px;position:relative;overflow:hidden}
-.bar i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--acc);border-radius:2px}
-.wkt{display:flex;justify-content:space-between;font-size:14px;color:var(--dim)}
-.ctl{display:flex;justify-content:center;gap:34px;align-items:center;margin-top:10px}
-.ctl button{width:60px;height:60px;border-radius:50%;display:grid;place-items:center}
-.ctl button:active{transform:scale(.94)}
-.ctl svg{width:28px;height:28px;stroke:var(--ink);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
-.ctl .play{width:68px;height:68px;border:1.5px solid var(--acc);box-shadow:0 0 18px rgba(var(--acc-rgb),.4)}
-.ctl .play svg{stroke:var(--acc);stroke-width:2.4}
-#mEmpty{text-align:center;padding-bottom:28px}
-.bis{font-size:24px;font-weight:700}
-.srcs{display:flex;justify-content:center;gap:44px;margin-top:22px}
-.srcs button{display:flex;flex-direction:column;align-items:center;gap:8px;font-size:15px;font-weight:600;color:var(--glow)}
-.srcs svg{width:64px;height:64px;padding:14px;border-radius:50%;border:1.5px solid var(--acc);stroke:var(--glow);fill:none;stroke-width:1.6;box-shadow:0 0 16px rgba(var(--acc-rgb),.4)}
-.srcs button:active svg{transform:scale(.94)}
-#media.kosong #mPlay,#media:not(.kosong) #mEmpty{display:none}
-/* wajah petunjuk izin: tampil hanya saat akses notifikasi belum diberikan */
-#mIzin{display:none;width:100%;padding:24px 14px;border:1.5px dashed rgba(var(--acc-rgb),.55);border-radius:18px;color:var(--glow);font-size:19px;font-weight:700;flex-direction:column;gap:8px;align-items:center;text-align:center}
-#mIzin small{font-size:14.5px;font-weight:400;color:var(--dim);line-height:1.45}
-#mIzin:active{transform:scale(.98)}
-#media.noizin #mPlay,#media.noizin #mEmpty{display:none}
-#media.noizin #mIzin{display:flex}
 /* mode jalan: info yang tidak perlu saat bergerak meredup (lokasi, cuaca, tanggal) */
-#loc,#cu,#tgl,#hij{transition:opacity .6s}
-#app.jalan #loc,#app.jalan #cu,#app.jalan #tgl,#app.jalan #hij{opacity:.15}
+#loc,#cu,#tgl{transition:opacity .6s}
+#app.jalan #loc,#app.jalan #cu,#app.jalan #tgl{opacity:.15}
 /* dock */
 #dock{position:absolute;left:36px;right:36px;bottom:22px;height:76px;display:flex;justify-content:space-around;align-items:center;border-top:1px solid var(--line);transition:transform .45s,opacity .45s}
 #dock.hide{transform:translateY(110px);opacity:0;pointer-events:none}
@@ -132,7 +91,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 #toast.on{opacity:1;transform:translateX(-50%)}
 #fotoExit{position:absolute;right:30px;top:24px;z-index:25;display:none}
 #app.foto #fotoExit{display:inline-flex}
-#loading{position:absolute;left:330px;top:50%;font-size:16px;color:var(--dim)}
+#loading{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:16px;color:var(--dim)}
 #simbar{position:fixed;left:0;right:0;bottom:0;height:56px;display:flex;align-items:center;gap:6px;padding:0 8px;background:#0b0f14;border-top:1px solid #1d2733;overflow-x:auto;font:600 14px Overpass,sans-serif;color:#9fb3c8;z-index:50}
 #simbar[hidden]{display:none}
 #simbar span{padding:0 6px;color:#6f8399;flex:none}
@@ -155,19 +114,14 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 .sheet.small{width:560px}
 #homeBanner{position:absolute;left:50%;top:168px;transform:translateX(-50%);display:flex;align-items:center;gap:14px;background:var(--panel);border:1px solid rgba(255,200,80,.5);border-radius:28px;padding:6px 8px 6px 22px;font-size:16px;z-index:15}
 #homeBanner[hidden]{display:none}
-#perf{position:absolute;left:330px;top:34px;font:700 15px Overpass;color:var(--glow);letter-spacing:.04em;background:rgba(10,14,20,.6);border:1px solid var(--line);border-radius:14px;padding:6px 14px}
+#perf{position:absolute;left:40px;top:120px;font:700 15px Overpass;color:var(--glow);letter-spacing:.04em;background:rgba(10,14,20,.6);border:1px solid var(--line);border-radius:14px;padding:6px 14px}
 #perf[hidden]{display:none}
-#doa .salam{font-size:15px;font-weight:700;color:var(--ink);margin-bottom:4px}
+#doa .salam{font-size:19px;font-weight:700;color:var(--ink);margin-bottom:4px}
 #hud{transition:transform .5s ease,bottom .5s ease,left .5s ease}
 #app.dockoff #hud{bottom:70px;transform:perspective(520px) rotateX(48deg) scale(1.4)}
 .holding{transform:scale(1.12)!important;transition:transform .45s ease;filter:drop-shadow(0 0 10px rgba(var(--acc-rgb),.9))}
 #loc.nogps svg{stroke:#8a94a0;animation:pulse 1.6s ease-in-out infinite}
 .wxsrc{font-size:12px;color:var(--dim);margin-left:6px;letter-spacing:.06em}
-.srcmini{display:flex;justify-content:center;gap:26px;margin-top:6px}
-.srcmini button{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;border:1px solid var(--line)}
-.srcmini svg{width:24px;height:24px;stroke:var(--glow);fill:none;stroke-width:1.6}
-.srcmini button:active{transform:scale(.94)}
-#slot.yt>button{visibility:hidden}
 #updBanner{position:absolute;left:50%;top:226px;transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:var(--panel);border:1px solid rgba(var(--acc-rgb),.6);border-radius:28px;padding:6px 8px 6px 22px;font-size:16px;z-index:15}
 #updBanner[hidden]{display:none}
 .notes{margin-top:10px;font-size:14.5px;line-height:1.6;color:var(--dim);white-space:pre-line;max-height:160px;overflow:auto;border-left:2px solid var(--acc);padding-left:12px}
@@ -193,36 +147,9 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
     <div class="kiri"><div class="adz" id="adz"><svg class="ic" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 119.5 4a6.5 6.5 0 0010.5 10.5z"/></svg><span id="pName">Isya</span> <b class="glow" id="pTime">--:--</b></div>
       <div id="cd"></div>
       <div class="cu off" id="cu"><svg class="ic" viewBox="0 0 24 24"><path d="M7 18h10a4 4 0 00.6-7.95A6 6 0 006.1 9.1 4.5 4.5 0 007 18z"/></svg><span id="wx"></span><span id="wxSrc" class="wxsrc"></span></div></div>
-    <div class="kanan"><div id="jam" class="glow">--:--</div><div id="tgl"></div><div id="hij"></div></div>
+    <div class="kanan"><div id="jam" class="glow">--:--</div><div id="tgl"></div></div>
   </div>
 
-  <div id="slot" class="ui">
-    <button id="bWaze" aria-label="Buka Waze di sisi kanan"><svg viewBox="0 0 24 24"><path d="M3 11l18-8-8 18-2-8z"/></svg>Waze</button>
-    <button id="bYT" aria-label="Buka YouTube di sisi kanan"><svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><path d="M10 9l5 3-5 3z"/></svg>YouTube</button>
-    <div id="panel" role="region" aria-label="Panel aplikasi"><button class="x" id="panelX" aria-label="Tutup panel">✕</button><b id="panelT"></b><span id="panelD"></span></div>
-  </div>
-
-  <div id="media" class="ui kosong">
-    <div id="mPlay">
-      <div class="mus"><div class="cover" id="cover"><svg class="ic" viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></div>
-        <div style="min-width:0"><div class="srcchip" id="msrc">Musik</div><div id="judul">—</div><div id="artis"></div></div></div>
-      <div class="bar"><i id="prog"></i></div><div class="wkt"><span id="tPos">0:00</span><span id="tDur">0:00</span></div>
-      <div class="ctl"><button id="mPrev" aria-label="Lagu sebelumnya"><svg viewBox="0 0 24 24"><path d="M19 5v14L8 12zM5 5v14"/></svg></button>
-        <button class="play" id="mPP" aria-label="Putar atau jeda"><svg viewBox="0 0 24 24" id="ppIc"><path d="M9 6v12M15 6v12"/></svg></button>
-        <button id="mNext" aria-label="Lagu berikutnya"><svg viewBox="0 0 24 24"><path d="M5 5v14l11-7zM19 5v14"/></svg></button></div>
-      <div class="srcmini" aria-label="Ganti sumber">
-        <button data-src="spotify" aria-label="Buka Spotify"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7.5 9.5c3-1 6.5-.6 9 .8M8 12.6c2.4-.7 5.2-.4 7.2.7M8.6 15.5c1.9-.5 3.9-.3 5.6.5"/></svg></button>
-        <button data-src="radio" aria-label="Buka Radio"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8l9-5"/><circle cx="16" cy="14" r="2.5"/></svg></button>
-        <button data-src="musik" aria-label="Buka Musik"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg></button></div>
-    </div>
-    <div id="mEmpty"><div class="bis glow">Bismillah, hati-hati di jalan.</div>
-      <div class="srcs">
-        <button data-src="spotify" aria-label="Buka Spotify"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M7.5 9.5c3-1 6.5-.6 9 .8M8 12.6c2.4-.7 5.2-.4 7.2.7M8.6 15.5c1.9-.5 3.9-.3 5.6.5"/></svg>Spotify</button>
-        <button data-src="radio" aria-label="Buka Radio"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8l9-5"/><circle cx="16" cy="14" r="2.5"/></svg>Radio</button>
-        <button data-src="musik" aria-label="Buka Musik"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Musik</button>
-      </div></div>
-    <button id="mIzin" aria-label="Izinkan akses notifikasi untuk panel media"><svg class="ic" viewBox="0 0 24 24" style="width:34px;height:34px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Ketuk untuk izinkan akses notifikasi</span><small>Panel media butuh izin ini untuk menampilkan lagu dari Spotify, Radio, dan Musik.</small></button>
-  </div>
 
   <nav id="dock" class="ui" aria-label="Dock"></nav>
   <div id="dim"></div>
@@ -239,7 +166,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 
   <div class="pop" id="popTema" role="dialog" aria-modal="true" aria-label="Pengaturan tema"><div class="sheet">
     <header><h2>Tema launcher</h2><button class="x" data-close aria-label="Tutup">✕</button></header>
-    <div class="tabs" role="tablist"><button role="tab" data-tab="tampilan" aria-selected="true">Tampilan</button><button role="tab" data-tab="mobil" aria-selected="false">Mobil</button><button role="tab" data-tab="sistem" aria-selected="false">Sistem</button></div>
+    <div class="tabs" role="tablist"><button role="tab" data-tab="tampilan" aria-selected="true">Tampilan</button><button role="tab" data-tab="mobil" aria-selected="false">Mobil</button><button role="tab" data-tab="sistem" aria-selected="false">Sistem</button><button role="tab" data-tab="info" aria-selected="false">Info</button></div>
     <section data-pane="tampilan">
       <h3>Wallpaper</h3><div class="row" id="walls"></div>
       <div class="row" style="margin-top:10px"><button class="chip" id="tGerak" aria-pressed="true">Gerak wallpaper</button></div>
@@ -260,8 +187,6 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
         <span class="hint" style="margin:0 0 14px">Tersimpan otomatis</span></div>
     </section>
     <section data-pane="sistem" hidden>
-      <h3>Tentang</h3>
-      <div class="about"><b>Luxio VARIO Launcher</b> <span id="ver">versi pratinjau</span></div>
       <h3>Pembaruan</h3>
       <div class="row"><button class="chip" id="tUpd">Periksa pembaruan</button><button class="chip" id="tUpdGo" hidden>Unduh &amp; pasang</button><span class="hint" id="updT" style="margin:0;align-self:center"></span></div>
       <div class="notes" id="updNotes" hidden></div>
@@ -269,10 +194,13 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
       <h3>Perawatan</h3><div class="row">
         <button class="chip" id="tHemat" aria-pressed="false">Mode grafis hemat</button>
         <button class="chip" id="tPerf" aria-pressed="false">Info FPS &amp; RAM</button>
-        <button class="chip" id="tCache">Bersihkan cache</button>
         <button class="chip warn" id="tReset">Reset semua pengaturan</button></div>
       <h3>Cadangan pengaturan</h3><div class="row"><button class="chip" id="tEks">Simpan cadangan</button><button class="chip" id="tImp">Pulihkan dari file</button></div>
-      <h3>Kredit</h3>
+    </section>
+    <section data-pane="info" hidden>
+      <h3>Tentang</h3>
+      <div class="about"><b>Luxio VARIO Launcher</b> <span id="ver">versi pratinjau</span></div>
+            <h3>Kredit</h3>
       <div class="about">Suara doa: Mishary Rashid Alafasy, via everyayah.com · Teks terjemahan: Kemenag RI<br>
         Cuaca: BMKG (Badan Meteorologi, Klimatologi, dan Geofisika) · Data wilayah: Kepmendagri via geografis (MIT)<br>
         Mesin 3D: three.js (MIT) · Huruf: Overpass (OFL)</div>
