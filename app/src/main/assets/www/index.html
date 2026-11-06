@@ -91,6 +91,15 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
 .srcs svg{width:64px;height:64px;padding:14px;border-radius:50%;border:1.5px solid var(--acc);stroke:var(--glow);fill:none;stroke-width:1.6;box-shadow:0 0 16px rgba(var(--acc-rgb),.4)}
 .srcs button:active svg{transform:scale(.94)}
 #media.kosong #mPlay,#media:not(.kosong) #mEmpty{display:none}
+/* wajah petunjuk izin: tampil hanya saat akses notifikasi belum diberikan */
+#mIzin{display:none;width:100%;padding:24px 14px;border:1.5px dashed rgba(var(--acc-rgb),.55);border-radius:18px;color:var(--glow);font-size:19px;font-weight:700;flex-direction:column;gap:8px;align-items:center;text-align:center}
+#mIzin small{font-size:14.5px;font-weight:400;color:var(--dim);line-height:1.45}
+#mIzin:active{transform:scale(.98)}
+#media.noizin #mPlay,#media.noizin #mEmpty{display:none}
+#media.noizin #mIzin{display:flex}
+/* mode jalan: info yang tidak perlu saat bergerak meredup (lokasi, cuaca, tanggal) */
+#loc,#cu,#tgl,#hij{transition:opacity .6s}
+#app.jalan #loc,#app.jalan #cu,#app.jalan #tgl,#app.jalan #hij{opacity:.15}
 /* dock */
 #dock{position:absolute;left:36px;right:36px;bottom:22px;height:76px;display:flex;justify-content:space-around;align-items:center;border-top:1px solid var(--line);transition:transform .45s,opacity .45s}
 #dock.hide{transform:translateY(110px);opacity:0;pointer-events:none}
@@ -212,6 +221,7 @@ button:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radi
         <button data-src="radio" aria-label="Buka Radio"><svg viewBox="0 0 24 24"><rect x="3" y="8" width="18" height="12" rx="2"/><path d="M7 8l9-5"/><circle cx="16" cy="14" r="2.5"/></svg>Radio</button>
         <button data-src="musik" aria-label="Buka Musik"><svg viewBox="0 0 24 24"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg>Musik</button>
       </div></div>
+    <button id="mIzin" aria-label="Izinkan akses notifikasi untuk panel media"><svg class="ic" viewBox="0 0 24 24" style="width:34px;height:34px"><path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/></svg><span>Ketuk untuk izinkan akses notifikasi</span><small>Panel media butuh izin ini untuk menampilkan lagu dari Spotify, Radio, dan Musik.</small></button>
   </div>
 
   <nav id="dock" class="ui" aria-label="Dock"></nav>

@@ -23,7 +23,7 @@
 //   {type:'place', kecamatan, kabupaten, kota, provinsi}
 //   {type:'lampu', on}                       broadcast lampu kota (OUT_DARK_START/STOP)
 //   {type:'weather', temp, desc, rain}
-//   {type:'media', active, app, pkg, title, artist, pos, dur /*ms*/, playing, art, bt}
+//   {type:'media', active, izin, app, pkg, title, artist, pos, dur /*ms*/, playing, art, bt}
 //   {type:'nav', active}                     navigasi Waze sedang berjalan
 //   {type:'wallpaper', data}                 data URI gambar dari galeri
 import * as THREE from 'three';
@@ -177,7 +177,7 @@ window.vario={onEvent(e){
   else if(e.type==='lampu'){st.lampuKota=!!e.on;cfg.lampuKota=st.lampuKota;cfg.lights=null;save();updDim();applyLights&&applyLights();need();}
   else if(e.type==='home'){$('homeBanner').hidden=!!e.isDefault;}
   else if(e.type==='weather'){st.temp=e.temp;st.wx=e.desc||'';st.wxSrc=e.src||'';st.rain=!!e.rain||/hujan/i.test(e.desc||'');need();}
-  else if(e.type==='media'){setMedia(e.active===false?null:e);}
+  else if(e.type==='media'){$('media').classList.toggle('noizin',e.izin===false);setMedia(e.active===false?null:e);}
   else if(e.type==='panel'){st.ytOpen=!!e.open;$('slot').classList.toggle('yt',st.ytOpen);}
   else if(e.type==='split'){st.splitOk=!!e.ok;}
   else if(e.type==='nav'){if(e.active&&!st.nav)openWaze(true);st.nav=!!e.active;}
@@ -193,7 +193,15 @@ let overLimit=false,actx=null;
 function beep(){if(!cfg.beep)return;if(call('beep')!==undefined)return;try{actx=actx||new (window.AudioContext||window.webkitAudioContext)();const o=actx.createOscillator(),g=actx.createGain();
   o.type='sine';o.frequency.value=1320;g.gain.setValueAtTime(0.0001,actx.currentTime);g.gain.exponentialRampToValueAtTime(0.25,actx.currentTime+0.02);g.gain.exponentialRampToValueAtTime(0.0001,actx.currentTime+0.22);
   o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+0.25);}catch(e){}}
-function setSpeed(v){if(v>100&&!overLimit){overLimit=true;beep();}else if(v<=97)overLimit=false;st.speed=v;hudDirty=true;need();if(v>10){if(!dockT)dockShow(false);}else{clearTimeout(dockT);dockT=0;dockShow(true);}}
+function setSpeed(v){if(v>100&&!overLimit){overLimit=true;beep();}else if(v<=97)overLimit=false;st.speed=v;hudDirty=true;need();if(v>10){if(!dockT)dockShow(false);}else{clearTimeout(dockT);dockT=0;dockShow(true);}updJalan(v);}
+// Mode jalan: saat mobil sungguh bergerak (>= 20 km/jam selama 3 detik), info yang tidak
+// perlu di perjalanan (lokasi, cuaca, tanggal) meredup; jam, hitung mundur salat, kecepatan,
+// media dan navigasi tetap penuh. Kembali normal saat kecepatan <= 5 selama 3 detik.
+let jalanT=0;
+function updJalan(v){const target=v>=20?true:v<=5?false:!!st.jalan;
+  if(target===!!st.jalan){clearTimeout(jalanT);jalanT=0;return;}
+  if(jalanT)return;
+  jalanT=setTimeout(()=>{jalanT=0;st.jalan=target;app.classList.toggle('jalan',target);},3000);}
 function peekDock(){if(st.speed<=10)return;dockShow(true);clearTimeout(dockT);dockT=setTimeout(()=>{dockT=0;if(st.speed>10)dockShow(false);},5000);}
 app.addEventListener('pointerdown',peekDock,true);
 
@@ -278,6 +286,9 @@ setInterval(updProg,1000);
 function mctl(c){call('mediaControl',c);if(SIM&&st.media){if(c==='play'||c==='pause')setMedia({pos:(st.media.pos||0)+(st.media.playing?performance.now()-st.media.t0:0),playing:c==='play'});else toast(c==='next'?'Lagu berikutnya':'Lagu sebelumnya');}}
 $('mPP').addEventListener('click',()=>mctl(st.media&&st.media.playing?'pause':'play'));
 $('mPrev').addEventListener('click',()=>mctl('prev'));$('mNext').addEventListener('click',()=>mctl('next'));
+// Panel media tanpa izin akses notifikasi: wajah petunjuk. Ketuk -> Android membuka
+// pengaturan Akses Notifikasi (mediaControl tanpa sesi + tanpa izin memang ke sana).
+$('mIzin').addEventListener('click',()=>{if(bridge)call('mediaControl','play');else toast('Simulasi: membuka pengaturan akses notifikasi');});
 (()=>{let x0=null;const el=$('media');el.addEventListener('pointerdown',e=>{x0=e.clientX;});
   el.addEventListener('pointerup',e=>{if(x0==null||!st.media)return;const s=+app.dataset.scale||1,dx=(e.clientX-x0)/s;x0=null;if(Math.abs(dx)>70)mctl(dx<0?'next':'prev');});})();
 
